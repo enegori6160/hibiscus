@@ -1,0 +1,86 @@
+body {
+  font-family: sans-serif;
+  background-color: #fff;
+  text-align: center;
+}
+
+.slot-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 50px;
+  gap: 20px;
+}
+
+.slot-machine {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.reel {
+  width: 80px;
+  height: 120px;
+  border: 2px solid #333;
+  background: #fff8dc;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.reel-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.reel span {
+  height: 40px;
+  line-height: 40px;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.seven {
+  color: red;
+}
+
+.message {
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+/* 両サイドのハイビスカス */
+.hibiscus-side {
+  width: 60px;
+  height: 60px;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.hibiscus-side.glowing {
+  background: radial-gradient(circle, #ff69b4 30%, transparent 70%);
+  animation: blink 0.5s linear infinite, rotate-scale 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+@keyframes rotate-scale {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes spin {
+  0% {
+    transform: translateY(0%);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
