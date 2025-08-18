@@ -1,8 +1,12 @@
 // シンボル定義
 const symbols = ["🍍", "🍒", "⭐", "🌺", "🍇", "７"];
 const spinDuration = 500;
+const costPerSpin = 3;
+const enableUndo = true;
 
 let coinBalance = 100;
+let isSpinning = false;
+let lastState = null;
 
 
 // リール回転関数（ボーナス時は777固定表示）
@@ -82,38 +86,117 @@ function glowHibiscus() {
 
 
 function updateCoinDisplay() {
+  const spinBtn = document.getElementById("spinButton");
+  spinBtn.disabled = isSpinning || coinBalance < costPerSpin;
+  spinBtn.setAttribute("aria-disabled", spinBtn.disabled);
   document.getElementById("coinDisplay").innerText = `残高：${coinBalance}枚`;
 }
 
-// スピンボタン処理
-document.getElementById("spinButton").addEventListener("click", () => {
-  // 残高チェック
-  if (coinBalance < 3) {
-    document.getElementById("message").innerText = "メダルが足りません！";
+function handleSpin() {
+  if (isSpinning) return;
+  if (coinBalance < costPerSpin) {
+    document.getElementById("message").innerText = "残高がありません";
     return;
   }
 
-  document.getElementById("message").innerText = "";
+  saveState();
+  isSpinning = true;
+  const spinBtn = document.getElementById("spinButton");
+  spinBtn.setAttribute("aria-busy", "true");
+  document.getElementById("message").innerText = "処理中…";
+  document.getElementById("message").classList.remove("error");
   document.getElementById("hibiscus").classList.remove("glowing");
 
-  // メダル消費（1スピンあたり10枚）
-  coinBalance -= 3;
+  coinBalance -= costPerSpin;
   updateCoinDisplay();
 
-  spinReels();       // 通常スピン
- 
+  spinReels();
 
   setTimeout(() => {
-    const isBonus = Math.random() < (1 / 3);
-    if (isBonus) {
-      document.getElementById("message").innerText = "🌺 ハイビスカスが光った！ボーナス確定！ 🌺";
-      glowHibiscus();    // 光らせる（演出）
-      coinBalance += 350; // ← 当選時に+350枚
-      updateCoinDisplay();
-      spinReels(true);
+    const isError = Math.random() < 0.05;
+    if (isError) {
+      document.getElementById("message").innerText = "エラーが発生しました";
+      document.getElementById("message").classList.add("error");
+      coinBalance += costPerSpin;
     } else {
-      document.getElementById("message").innerText = "ハズレ…もう一回挑戦！";
+      const isBonus = Math.random() < 1 / 3;
+      if (isBonus) {
+        document.getElementById("message").innerText =
+          "🌺 ハイビスカスが光った！ボーナス確定！ 🌺";
+        glowHibiscus();
+        coinBalance += 350;
+        spinReels(true);
+      } else {
+        document.getElementById("message").innerText =
+          "ハズレ…もう一回挑戦！";
+      }
     }
+    isSpinning = false;
+    spinBtn.removeAttribute("aria-busy");
+    updateCoinDisplay();
+    setUndoDisabled(!lastState);
   }, spinDuration);
+}
+
+document
+  .getElementById("spinButton")
+  .addEventListener("click", handleSpin);
+
+function saveState() {
+  if (!enableUndo) return;
+  const reels = Array.from(document.querySelectorAll(".reel")).map(
+    (reel) => reel.innerHTML
+  );
+  lastState = {
+    coinBalance,
+    message: document.getElementById("message").innerText,
+    reels,
+  };
+  setUndoDisabled(false);
+}
+
+function undo() {
+  if (!enableUndo || !lastState) return;
+  coinBalance = lastState.coinBalance;
+  document.getElementById("message").innerText = lastState.message;
+  const reels = document.querySelectorAll(".reel");
+  reels.forEach((reel, i) => {
+    reel.innerHTML = lastState.reels[i];
+  });
+  lastState = null;
+  updateCoinDisplay();
+  setUndoDisabled(true);
+}
+
+if (enableUndo) {
+  document.getElementById("undoButton").addEventListener("click", undo);
+} else {
+  document.getElementById("undoButton").style.display = "none";
+}
+
+function setUndoDisabled(disabled) {
+  if (!enableUndo) return;
+  const btn = document.getElementById("undoButton");
+  btn.disabled = disabled;
+  btn.setAttribute("aria-disabled", disabled);
+}
+
+document.addEventListener("keydown", (e) => {
+  if (
+    enableUndo &&
+    (e.ctrlKey || e.metaKey) &&
+    e.key.toLowerCase() === "z"
+  ) {
+    e.preventDefault();
+    undo();
+  }
+  if (e.key === " " || e.key === "Enter") {
+    if (e.target.tagName !== "BUTTON") {
+      e.preventDefault();
+      handleSpin();
+    }
+  }
 });
+
+updateCoinDisplay();
 
