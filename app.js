@@ -89,6 +89,9 @@ function updateCoinDisplay() {
   const spinBtn = document.getElementById("spinButton");
   spinBtn.disabled = isSpinning || coinBalance < costPerSpin;
   spinBtn.setAttribute("aria-disabled", spinBtn.disabled);
+  const resetBtn = document.getElementById("resetButton");
+  resetBtn.disabled = isSpinning;
+  resetBtn.setAttribute("aria-disabled", resetBtn.disabled);
   document.getElementById("coinDisplay").innerText = `残高：${coinBalance}枚`;
 }
 
@@ -142,6 +145,23 @@ document
   .getElementById("spinButton")
   .addEventListener("click", handleSpin);
 
+function resetGame() {
+  if (isSpinning) return;
+  coinBalance = 100;
+  lastState = null;
+  document.getElementById("message").innerText = "ゲームをリセットしました";
+  document.getElementById("message").classList.remove("error");
+  const reels = document.querySelectorAll(".reel");
+  reels.forEach((reel) => {
+    reel.innerHTML = "";
+  });
+  document.getElementById("hibiscus").classList.remove("glowing");
+  updateCoinDisplay();
+  setUndoDisabled(true);
+}
+
+document.getElementById("resetButton").addEventListener("click", resetGame);
+
 function saveState() {
   if (!enableUndo) return;
   const reels = Array.from(document.querySelectorAll(".reel")).map(
@@ -189,6 +209,10 @@ document.addEventListener("keydown", (e) => {
   ) {
     e.preventDefault();
     undo();
+  }
+  if (e.key.toLowerCase() === "r") {
+    e.preventDefault();
+    resetGame();
   }
   if (e.key === " " || e.key === "Enter") {
     if (e.target.tagName !== "BUTTON") {
