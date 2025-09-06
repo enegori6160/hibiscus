@@ -9,6 +9,18 @@ let isSpinning = false;
 let lastState = null;
 let soundEnabled = true;
 let audioCtx;
+let hibiscusTimer = null;
+// 設定（1〜6）の確率テーブルと配当
+const SETTINGS = {
+  1: { big: 292, reg: 489 },
+  2: { big: 280, reg: 452 },
+  3: { big: 268, reg: 420 },
+  4: { big: 257, reg: 390 },
+  5: { big: 244, reg: 360 },
+  6: { big: 232, reg: 332 },
+};
+const PAYOUT = { big: 350, reg: 120 };
+let currentSetting = 1;
 
 // Utilities: persistence
 const storage = {
@@ -180,10 +192,22 @@ function spinReels(isBonus = false) {
 }
 
 function glowHibiscus() {
+  clearTimeout(hibiscusTimer);
   const left = document.getElementById("hibiscus");
   const right = document.getElementById("hibiscus-right");
   [left, right].forEach(el => el && el.classList.add("glowing"));
-  setTimeout(() => { [left, right].forEach(el => el && el.classList.remove("glowing")); }, 6000);
+  hibiscusTimer = setTimeout(() => {
+    [left, right].forEach(el => el && el.classList.remove("glowing"));
+    hibiscusTimer = null;
+  }, 6000);
+}
+
+function clearHibiscusGlow() {
+  clearTimeout(hibiscusTimer);
+  hibiscusTimer = null;
+  const left = document.getElementById("hibiscus");
+  const right = document.getElementById("hibiscus-right");
+  [left, right].forEach(el => el && el.classList.remove("glowing"));
 }
 
 function updateCoinDisplay() {
@@ -211,7 +235,7 @@ function handleSpin() {
   spinBtn.setAttribute("aria-busy", "true");
   setMessage("スピン中…");
   playSound("click");
-  document.getElementById("hibiscus").classList.remove("glowing");
+  clearHibiscusGlow();
 
   coinBalance -= costPerSpin;
   updateCoinDisplay();
@@ -225,7 +249,7 @@ function handleSpin() {
       playSound("error");
       coinBalance += costPerSpin;
     } else {
-      const isBonus = Math.random() < 1 / 3;
+      const isBonus = Math.random() < 1 / 100;
       if (isBonus) {
         setMessage("🌺 ハイビスカス点灯！ボーナス当選！ 🌺");
         glowHibiscus();
@@ -261,6 +285,84 @@ document.querySelectorAll('#siteNav .nav-link').forEach((a) => a.addEventListene
   if (nav.classList.contains('open')) toggleNav();
 }));
 
+// --- 設定選択と新しいスピンロジック（設定1〜6対応） ---
+function handleSettingChange(value) {
+  const v = String(value);
+  if (!SETTINGS[v]) return;
+  currentSetting = Number(v);
+  storage.save("setting", currentSetting);
+}
+const settingSelect = document.getElementById("settingSelect");
+if (settingSelect) {
+  const saved = storage.load("setting", 1);
+  currentSetting = Number(saved);
+  settingSelect.value = String(currentSetting);
+  settingSelect.addEventListener("change", (e) => handleSettingChange(e.target.value));
+}
+
+function handleSpinV2() {
+  if (isSpinning) return;
+  if (coinBalance < costPerSpin) {
+    setMessage("コインが足りません", true);
+    playSound("error");
+    return;
+  }
+
+  saveState();
+  isSpinning = true;
+  const spinBtn = document.getElementById("spinButton");
+  spinBtn.setAttribute("aria-busy", "true");
+  setMessage("スピン中…");
+  playSound("click");
+  clearHibiscusGlow();
+
+  coinBalance -= costPerSpin;
+  updateCoinDisplay();
+  spinReels();
+
+  setTimeout(() => {
+    const isError = Math.random() < 0.05;
+    if (isError) {
+      setMessage("エラーが発生しました", true);
+      playSound("error");
+      coinBalance += costPerSpin;
+    } else {
+      const table = SETTINGS[currentSetting] || SETTINGS[1];
+      const pBig = 1 / table.big;
+      const pReg = 1 / table.reg;
+      const u = Math.random();
+      if (u < pBig) {
+        setMessage("🌺 BIGボーナス！");
+        glowHibiscus();
+        playKyuin();
+        coinBalance += PAYOUT.big;
+        spinReels(true);
+      } else if (u < pBig + pReg) {
+        setMessage("🌺 REGボーナス！");
+        glowHibiscus();
+        playKyuin();
+        coinBalance += PAYOUT.reg;
+        spinReels(true);
+      } else {
+        setMessage("ハズレ…次こそ当てよう！");
+      }
+    }
+    isSpinning = false;
+    spinBtn.removeAttribute("aria-busy");
+    updateCoinDisplay();
+    setUndoDisabled(!lastState);
+  }, spinDuration);
+}
+
+// 既存のクリックハンドラを置き換え
+try {
+  const spinBtn = document.getElementById("spinButton");
+  if (spinBtn) {
+    spinBtn.removeEventListener("click", handleSpin);
+    spinBtn.addEventListener("click", handleSpinV2);
+  }
+} catch {}
+
 // Theming on load
 (function initPreferences() {
   const savedTheme = storage.load("theme", null);
@@ -282,7 +384,7 @@ function resetGame() {
   playSound("click");
   const reels = document.querySelectorAll(".reel");
   reels.forEach((reel) => { reel.innerHTML = ""; });
-  document.getElementById("hibiscus").classList.remove("glowing");
+  clearHibiscusGlow();
   updateCoinDisplay();
   setUndoDisabled(true);
 }

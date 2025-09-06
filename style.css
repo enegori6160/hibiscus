@@ -183,6 +183,7 @@ button:disabled { background: var(--color-border); cursor: not-allowed; box-shad
 button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 .button-like { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 10px; padding: 8px 12px; }
+.select-like { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 10px; padding: 8px 12px; min-height: 40px; }
 
 /* Hibiscus */
 .hibiscus-side {
@@ -225,6 +226,7 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 .setting-item { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; align-items: center; padding: 10px; border: 1px dashed var(--color-border); border-radius: 10px; }
 .setting-label { color: var(--color-muted); }
 .setting-control { text-align: right; }
+.setting-control .select-like { min-width: 120px; }
 
 .app-footer { text-align: center; color: var(--color-muted); padding: 16px; }
 
