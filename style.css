@@ -185,13 +185,33 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 .button-like { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 10px; padding: 8px 12px; }
 
 /* Hibiscus */
-.hibiscus-side { width: clamp(44px, 8vw, 72px); height: clamp(44px, 8vw, 72px); background: transparent; border-radius: 50%; }
-.hibiscus-side.glowing {
-  background: radial-gradient(circle at 50% 50%, #ff1a1a 40%, rgba(255,0,0,0.7) 60%, transparent 75%);
-  box-shadow: 0 0 12px rgba(255,0,0,0.7), 0 0 28px rgba(255,0,0,0.55), 0 0 48px rgba(255,0,0,0.35);
-  animation: blink .4s steps(2, jump-none) infinite, pulse-glow 1s ease-in-out infinite;
+.hibiscus-side {
+  position: relative;
+  width: clamp(64px, 12vw, 112px);
+  height: clamp(64px, 12vw, 112px);
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
-@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+.hibiscus-side::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: center/contain no-repeat url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='%23ff1a1a'><ellipse cx='50' cy='16' rx='18' ry='22'/><ellipse cx='82' cy='34' rx='18' ry='22' transform='rotate(20 82 34)'/><ellipse cx='68' cy='78' rx='18' ry='22' transform='rotate(40 68 78)'/><ellipse cx='32' cy='78' rx='18' ry='22' transform='rotate(-40 32 78)'/><ellipse cx='18' cy='34' rx='18' ry='22' transform='rotate(-20 18 34)'/></g><circle cx='50' cy='52' r='12' fill='%23ffd84d'/><circle cx='54' cy='48' r='4' fill='%23ffffff' opacity='0.7'/></svg>");
+  opacity: .18;
+  filter: saturate(.7) brightness(.95);
+  transition: opacity .2s ease, filter .2s ease, transform .2s ease;
+}
+.hibiscus-side.glowing {
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.35) 0%, rgba(255,0,0,0.22) 40%, transparent 75%);
+  box-shadow: 0 0 14px rgba(255,0,0,0.65), 0 0 32px rgba(255,0,0,0.5), 0 0 60px rgba(255,0,0,0.35);
+  animation: hibiscus-blink .44s steps(2, jump-none) infinite, pulse-glow 1.1s ease-in-out infinite;
+}
+.hibiscus-side.glowing::before {
+  opacity: 1;
+  filter: saturate(1.25) brightness(1.1) drop-shadow(0 0 6px rgba(255,0,0,.55)) drop-shadow(0 0 14px rgba(255,0,0,.4));
+}
+@keyframes hibiscus-blink { 0%,100%{opacity:1;} 50%{opacity:.22;} }
 @keyframes pulse-glow { 0%{ transform: scale(1);} 50%{ transform: scale(1.08);} 100%{ transform: scale(1);} }
 
 /* Reel spin scrolling */
