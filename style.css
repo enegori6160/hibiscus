@@ -1,20 +1,74 @@
 /* Design tokens */
 :root {
   --color-bg: #f8fafc;
+  --color-text: #0f172a;
   --color-primary: #1e40af;
+  --color-primary-hover: #1d4ed8;
   --color-border: #94a3b8;
   --color-error: #dc2626;
   --radius: 8px;
   --spacing: 16px;
   --font-family: system-ui, sans-serif;
+
+  /* Dark mode tokens */
+  --color-bg-dark: #0f172a;
+  --color-text-dark: #f8fafc;
+  --color-primary-dark: #3b82f6;
+  --color-primary-hover-dark: #60a5fa;
+  --color-border-dark: #334155;
 }
 
 body {
   font-family: var(--font-family);
   background-color: var(--color-bg);
-  color: #0f172a;
+  color: var(--color-text);
   text-align: center;
   padding: var(--spacing);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+body.dark {
+  --color-bg: var(--color-bg-dark);
+  --color-text: var(--color-text-dark);
+  --color-primary: var(--color-primary-dark);
+  --color-primary-hover: var(--color-primary-hover-dark);
+  --color-border: var(--color-border-dark);
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.app-title {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.settings {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.icon-button {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius);
+  transition: background 0.2s;
+}
+
+.icon-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark .icon-button:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .slot-container {
@@ -36,7 +90,7 @@ body {
   width: 80px;
   height: 120px;
   border: 2px solid var(--color-border);
-  background: #fff;
+  background: var(--color-bg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -66,10 +120,26 @@ body {
   font-weight: bold;
   margin-top: var(--spacing);
   min-height: 1.5em;
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.message.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .message.error {
   color: var(--color-error);
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+  margin-top: var(--spacing);
 }
 
 button {
@@ -85,12 +155,12 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--color-primary-hover);
   transform: translateY(-1px);
 }
 
 button:disabled {
-  background: #94a3b8;
+  background: var(--color-border);
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -98,10 +168,6 @@ button:disabled {
 button:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-}
-
-button + button {
-  margin-left: var(--spacing);
 }
 
 /* 両サイドのハイビスカス */
@@ -134,5 +200,15 @@ button + button {
   }
   100% {
     transform: translateY(-50%);
+  }
+}
+
+@media (max-width: 600px) {
+  .slot-container {
+    flex-direction: column;
+  }
+  .app-header {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }
