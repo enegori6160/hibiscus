@@ -3,48 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ハナハナ風スロット</title>
+  <title>ハナハナスロット</title>
+  <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-header">
-    <h1 class="app-title">ハナハナ風スロット</h1>
+  <header class="app-header" role="banner">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">🌺</span>
+      <span class="brand-name">ハナハナスロット</span>
+    </div>
+
+    <button id="navToggle" class="icon-button hamburger" aria-label="メニューを開閉" aria-expanded="false" aria-controls="siteNav">☰</button>
+
+    <nav id="siteNav" class="site-nav" aria-label="メインナビゲーション">
+      <a href="#game" class="nav-link">ゲーム</a>
+      <a href="#howto" class="nav-link">遊び方</a>
+      <a href="#settings" class="nav-link">設定</a>
+    </nav>
+
     <div class="settings">
-      <button
-        id="themeToggle"
-        class="icon-button"
-        aria-label="ダークモード切り替え"
-        aria-pressed="false"
-      >🌙</button>
-      <button
-        id="soundToggle"
-        class="icon-button"
-        aria-label="サウンド切り替え"
-        aria-pressed="true"
-      >🔊</button>
+      <button id="themeToggle" class="icon-button" aria-label="ダークモード切替" aria-pressed="false">🌙</button>
+      <button id="soundToggle" class="icon-button" aria-label="サウンド切替" aria-pressed="true">🔊</button>
     </div>
   </header>
 
-  <main class="slot-container">
-    <div class="hibiscus-side" id="hibiscus"></div>
+  <main class="app-main" id="game" tabindex="-1">
+    <section class="game-panel" aria-labelledby="gameHeading">
+      <h1 id="gameHeading" class="sr-only">ゲーム</h1>
+      <div class="slot-container">
+        <div class="hibiscus-side" id="hibiscus" aria-hidden="true"></div>
+        <div class="slot-machine" role="group" aria-label="スロットリール">
+          <div id="reel0" class="reel" aria-label="リール1"></div>
+          <div id="reel1" class="reel" aria-label="リール2"></div>
+          <div id="reel2" class="reel" aria-label="リール3"></div>
+        </div>
+        <div class="hibiscus-side" id="hibiscus-right" aria-hidden="true"></div>
+      </div>
 
-    <div class="slot-machine">
-      <div id="reel0" class="reel"></div>
-      <div id="reel1" class="reel"></div>
-      <div id="reel2" class="reel"></div>
-    </div>
+      <div class="controls" role="group" aria-label="操作ボタン">
+        <button id="spinButton" aria-label="スピンする" class="primary">スピン</button>
+        <button id="undoButton" aria-label="直前の操作を取り消す" disabled>取り消し</button>
+        <button id="resetButton" aria-label="ゲームをリセット">リセット</button>
+      </div>
 
-    <div class="hibiscus-side" id="hibiscus-right"></div>
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+      <div id="coinDisplay" class="coin" aria-live="polite">所持コイン：100枚</div>
+    </section>
+
+    <aside class="side-panel" aria-labelledby="howtoHeading" id="howto">
+      <h2 id="howtoHeading">遊び方</h2>
+      <ul class="howto-list">
+        <li>スピンは1回3枚消費します。</li>
+        <li>ランダムでボーナス（約33%）が発生します。</li>
+        <li>ボーナス時はハイビスカスが点灯し、コインを獲得します。</li>
+        <li>取り消しで直前の状態に戻せます。</li>
+        <li>スペース/Enterでもスピンできます。</li>
+      </ul>
+    </aside>
+
+    <section class="settings-panel" aria-labelledby="settingsHeading" id="settings">
+      <h2 id="settingsHeading">設定</h2>
+      <div class="settings-grid">
+        <div class="setting-item">
+          <div class="setting-label">テーマ</div>
+          <div class="setting-control"><button id="themeToggle2" class="button-like">ライト/ダーク切替</button></div>
+        </div>
+        <div class="setting-item">
+          <div class="setting-label">サウンド</div>
+          <div class="setting-control"><button id="soundToggle2" class="button-like">オン/オフ</button></div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <div class="controls">
-    <button id="spinButton" aria-label="スピン">スピン</button>
-    <button id="undoButton" aria-label="前回を取り消す" disabled>取り消し</button>
-    <button id="resetButton" aria-label="ゲームをリセット">リセット</button>
-  </div>
-
-  <div id="message" class="message" role="status" aria-live="polite"></div>
-  <div id="coinDisplay" class="message" aria-live="polite">残高：100枚</div>
+  <footer class="app-footer" role="contentinfo">
+    <small>© 2025 Hanahana Slot</small>
+  </footer>
 
   <script src="app.js"></script>
 </body>

@@ -1,6 +1,6 @@
-// シンボル定義
-const symbols = ["🍍", "🍒", "⭐", "🌺", "🍇", "７"];
-const spinDuration = 500;
+// Symbols and config
+const symbols = ["🍒", "🍋", "⭐", "🍇", "🔔", "7️⃣"];
+const spinDuration = 600;
 const costPerSpin = 3;
 const enableUndo = true;
 
@@ -9,6 +9,12 @@ let isSpinning = false;
 let lastState = null;
 let soundEnabled = true;
 let audioCtx;
+
+// Utilities: persistence
+const storage = {
+  save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} },
+  load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
+};
 
 function playSound(type) {
   if (!soundEnabled) return;
@@ -22,10 +28,55 @@ function playSound(type) {
     osc.frequency.setValueAtTime(freq, now);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
     osc.start(now);
-    osc.stop(now + 0.3);
+    osc.stop(now + 0.25);
+  } catch (e) {
+    console.warn("Web Audio not supported", e);
+  }
+}
+
+// Pachislo-like "kyuin" multi-chirp for bonus
+function playKyuin() {
+  if (!soundEnabled) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+
+    const chirp = (startF, endF, dur, delay, type = "sawtooth", peak = 0.22) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(startF, now + delay);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(50, endF), now + delay + dur);
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.linearRampToValueAtTime(peak, now + delay + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.01);
+    };
+
+    // Three short upward chirps for "キュイン×3"
+    chirp(650, 2400, 0.18, 0.00, "sawtooth", 0.25);
+    chirp(700, 2600, 0.18, 0.08, "sawtooth", 0.25);
+    chirp(800, 2800, 0.18, 0.16, "triangle", 0.22);
+
+    // Add a short bell-like ping on top
+    const bell = audioCtx.createOscillator();
+    const bellGain = audioCtx.createGain();
+    bell.type = "sine";
+    bell.frequency.setValueAtTime(1500, now + 0.04);
+    bell.frequency.exponentialRampToValueAtTime(2400, now + 0.16);
+    bellGain.gain.setValueAtTime(0.0001, now + 0.04);
+    bellGain.gain.linearRampToValueAtTime(0.18, now + 0.08);
+    bellGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
+    bell.connect(bellGain);
+    bellGain.connect(audioCtx.destination);
+    bell.start(now + 0.04);
+    bell.stop(now + 0.4);
   } catch (e) {
     console.warn("Web Audio not supported", e);
   }
@@ -40,25 +91,47 @@ function setMessage(text, isError = false) {
   msg.classList.add("show");
 }
 
+function reflectSoundButtons() {
+  const btns = [document.getElementById("soundToggle"), document.getElementById("soundToggle2")].filter(Boolean);
+  btns.forEach((btn) => {
+    btn.setAttribute("aria-pressed", soundEnabled);
+    btn.textContent = soundEnabled ? "🔊" : "🔇";
+  });
+}
+
+function reflectThemeButtons() {
+  const isDark = document.body.classList.contains("dark");
+  const btns = [document.getElementById("themeToggle"), document.getElementById("themeToggle2")].filter(Boolean);
+  btns.forEach((btn) => {
+    btn.setAttribute("aria-pressed", isDark);
+    btn.textContent = isDark ? "🌞" : "🌙";
+  });
+}
+
 function toggleTheme() {
   document.body.classList.toggle("dark");
-  const isDark = document.body.classList.contains("dark");
-  const btn = document.getElementById("themeToggle");
-  btn.setAttribute("aria-pressed", isDark);
-  btn.textContent = isDark ? "☀️" : "🌙";
+  reflectThemeButtons();
+  storage.save("theme", document.body.classList.contains("dark") ? "dark" : "light");
   playSound("click");
 }
 
 function toggleSound() {
   if (soundEnabled) playSound("click");
   soundEnabled = !soundEnabled;
-  const btn = document.getElementById("soundToggle");
-  btn.setAttribute("aria-pressed", soundEnabled);
-  btn.textContent = soundEnabled ? "🔊" : "🔇";
+  reflectSoundButtons();
+  storage.save("soundEnabled", soundEnabled);
 }
 
+// Mobile nav
+function toggleNav() {
+  const nav = document.getElementById("siteNav");
+  const btn = document.getElementById("navToggle");
+  const open = !nav.classList.contains("open");
+  nav.classList.toggle("open", open);
+  btn.setAttribute("aria-expanded", String(open));
+}
 
-// リール回転関数（ボーナス時は777固定表示）
+// Reel logic
 function spinReels(isBonus = false) {
   const reels = document.querySelectorAll(".reel");
 
@@ -66,7 +139,6 @@ function spinReels(isBonus = false) {
     const reelContent = document.createElement("div");
     reelContent.classList.add("reel-content");
 
-    // 回転演出用の10個
     for (let i = 0; i < 10; i++) {
       const symbol = symbols[Math.floor(Math.random() * symbols.length)];
       const span = document.createElement("span");
@@ -78,7 +150,6 @@ function spinReels(isBonus = false) {
     reel.appendChild(reelContent);
     reelContent.style.animation = "spin 0.2s linear infinite";
 
-    // 回転停止して最終表示へ
     setTimeout(() => {
       reelContent.style.animation = "none";
       const finalContent = document.createElement("div");
@@ -88,13 +159,9 @@ function spinReels(isBonus = false) {
         const span = document.createElement("span");
 
         if (isBonus) {
-          // ボーナス時は斜め揃いの７７７
-          if (
-            (index === 0 && i === 0) ||
-            (index === 1 && i === 1) ||
-            (index === 2 && i === 2)
-          ) {
-            span.textContent = "７";
+          // force diagonal 7 on bonus
+          if ((index === 0 && i === 0) || (index === 1 && i === 1) || (index === 2 && i === 2)) {
+            span.textContent = "7️⃣";
             span.classList.add("seven");
           } else {
             span.textContent = symbols[Math.floor(Math.random() * symbols.length)];
@@ -112,27 +179,12 @@ function spinReels(isBonus = false) {
   });
 }
 
-// ハイビスカス点灯処理
 function glowHibiscus() {
-  const hibiscus = document.getElementById("hibiscus");
-  hibiscus.classList.add("glowing");
-  setTimeout(() => {
-    hibiscus.classList.remove("glowing");
-  }, 6000);
+  const left = document.getElementById("hibiscus");
+  const right = document.getElementById("hibiscus-right");
+  [left, right].forEach(el => el && el.classList.add("glowing"));
+  setTimeout(() => { [left, right].forEach(el => el && el.classList.remove("glowing")); }, 6000);
 }
-// function glowHibiscus() {
-//   const hibiscusLeft = document.getElementById("hibiscus-left");
-//   const hibiscusRight = document.getElementById("hibiscus-right");
-
-//   hibiscusLeft.classList.add("glowing");
-//   hibiscusRight.classList.add("glowing");
-
-//   setTimeout(() => {
-//     hibiscusLeft.classList.remove("glowing");
-//     hibiscusRight.classList.remove("glowing");
-//   }, 6000);
-// }
-
 
 function updateCoinDisplay() {
   const spinBtn = document.getElementById("spinButton");
@@ -141,13 +193,14 @@ function updateCoinDisplay() {
   const resetBtn = document.getElementById("resetButton");
   resetBtn.disabled = isSpinning;
   resetBtn.setAttribute("aria-disabled", resetBtn.disabled);
-  document.getElementById("coinDisplay").innerText = `残高：${coinBalance}枚`;
+  document.getElementById("coinDisplay").innerText = `所持コイン：${coinBalance}枚`;
+  storage.save("coinBalance", coinBalance);
 }
 
 function handleSpin() {
   if (isSpinning) return;
   if (coinBalance < costPerSpin) {
-    setMessage("残高がありません", true);
+    setMessage("コインが足りません", true);
     playSound("error");
     return;
   }
@@ -156,7 +209,7 @@ function handleSpin() {
   isSpinning = true;
   const spinBtn = document.getElementById("spinButton");
   spinBtn.setAttribute("aria-busy", "true");
-  setMessage("処理中…");
+  setMessage("スピン中…");
   playSound("click");
   document.getElementById("hibiscus").classList.remove("glowing");
 
@@ -174,13 +227,13 @@ function handleSpin() {
     } else {
       const isBonus = Math.random() < 1 / 3;
       if (isBonus) {
-        setMessage("🌺 ハイビスカスが光った！ボーナス確定！ 🌺");
-        playSound("win");
+        setMessage("🌺 ハイビスカス点灯！ボーナス当選！ 🌺");
         glowHibiscus();
+        playKyuin();
         coinBalance += 350;
         spinReels(true);
       } else {
-        setMessage("ハズレ…もう一回挑戦！");
+        setMessage("ハズレ…次こそ当てよう！");
       }
     }
     isSpinning = false;
@@ -190,9 +243,36 @@ function handleSpin() {
   }, spinDuration);
 }
 
-document
-  .getElementById("spinButton")
-  .addEventListener("click", handleSpin);
+document.getElementById("spinButton").addEventListener("click", handleSpin);
+document.getElementById("resetButton").addEventListener("click", resetGame);
+document.getElementById("themeToggle").addEventListener("click", toggleTheme);
+document.getElementById("soundToggle").addEventListener("click", toggleSound);
+
+// Duplicate controls in settings panel
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "themeToggle2") toggleTheme();
+  if (e.target && e.target.id === "soundToggle2") toggleSound();
+});
+
+// Nav toggle
+document.getElementById("navToggle").addEventListener("click", toggleNav);
+document.querySelectorAll('#siteNav .nav-link').forEach((a) => a.addEventListener('click', () => {
+  const nav = document.getElementById('siteNav');
+  if (nav.classList.contains('open')) toggleNav();
+}));
+
+// Theming on load
+(function initPreferences() {
+  const savedTheme = storage.load("theme", null);
+  const preferDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  if (savedTheme === "dark" || (!savedTheme && preferDark)) {
+    document.body.classList.add("dark");
+  }
+  soundEnabled = storage.load("soundEnabled", true);
+  coinBalance = storage.load("coinBalance", 100);
+  reflectThemeButtons();
+  reflectSoundButtons();
+})();
 
 function resetGame() {
   if (isSpinning) return;
@@ -201,33 +281,16 @@ function resetGame() {
   setMessage("ゲームをリセットしました");
   playSound("click");
   const reels = document.querySelectorAll(".reel");
-  reels.forEach((reel) => {
-    reel.innerHTML = "";
-  });
+  reels.forEach((reel) => { reel.innerHTML = ""; });
   document.getElementById("hibiscus").classList.remove("glowing");
   updateCoinDisplay();
   setUndoDisabled(true);
 }
 
-document.getElementById("resetButton").addEventListener("click", resetGame);
-
-document.getElementById("themeToggle").addEventListener("click", toggleTheme);
-document.getElementById("soundToggle").addEventListener("click", toggleSound);
-
-if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-  toggleTheme();
-}
-
 function saveState() {
   if (!enableUndo) return;
-  const reels = Array.from(document.querySelectorAll(".reel")).map(
-    (reel) => reel.innerHTML
-  );
-  lastState = {
-    coinBalance,
-    message: document.getElementById("message").innerText,
-    reels,
-  };
+  const reels = Array.from(document.querySelectorAll(".reel")).map((reel) => reel.innerHTML);
+  lastState = { coinBalance, message: document.getElementById("message").innerText, reels };
   setUndoDisabled(false);
 }
 
@@ -236,9 +299,7 @@ function undo() {
   coinBalance = lastState.coinBalance;
   setMessage(lastState.message);
   const reels = document.querySelectorAll(".reel");
-  reels.forEach((reel, i) => {
-    reel.innerHTML = lastState.reels[i];
-  });
+  reels.forEach((reel, i) => { reel.innerHTML = lastState.reels[i]; });
   lastState = null;
   updateCoinDisplay();
   setUndoDisabled(true);
@@ -259,11 +320,7 @@ function setUndoDisabled(disabled) {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (
-    enableUndo &&
-    (e.ctrlKey || e.metaKey) &&
-    e.key.toLowerCase() === "z"
-  ) {
+  if (enableUndo && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault();
     undo();
   }
@@ -280,4 +337,3 @@ document.addEventListener("keydown", (e) => {
 });
 
 updateCoinDisplay();
-
