@@ -7,6 +7,24 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <header class="app-header">
+    <h1 class="app-title">ハナハナ風スロット</h1>
+    <div class="settings">
+      <button
+        id="themeToggle"
+        class="icon-button"
+        aria-label="ダークモード切り替え"
+        aria-pressed="false"
+      >🌙</button>
+      <button
+        id="soundToggle"
+        class="icon-button"
+        aria-label="サウンド切り替え"
+        aria-pressed="true"
+      >🔊</button>
+    </div>
+  </header>
+
   <main class="slot-container">
     <div class="hibiscus-side" id="hibiscus"></div>
 
@@ -19,9 +37,12 @@
     <div class="hibiscus-side" id="hibiscus-right"></div>
   </main>
 
-  <button id="spinButton" aria-label="スピン">スピン</button>
-  <button id="undoButton" aria-label="前回を取り消す" disabled>取り消し</button>
-  <button id="resetButton" aria-label="ゲームをリセット">リセット</button>
+  <div class="controls">
+    <button id="spinButton" aria-label="スピン">スピン</button>
+    <button id="undoButton" aria-label="前回を取り消す" disabled>取り消し</button>
+    <button id="resetButton" aria-label="ゲームをリセット">リセット</button>
+  </div>
+
   <div id="message" class="message" role="status" aria-live="polite"></div>
   <div id="coinDisplay" class="message" aria-live="polite">残高：100枚</div>
 
