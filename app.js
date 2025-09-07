@@ -28,14 +28,14 @@ function setLeverEngaged(on) {
     if (leverBtn) leverBtn.classList.toggle('engaged', !!on);
   } catch {}
 }
-// 設定（1〜6）の確率テーブルと配当
+// 設定（1〜6）の確率テーブルと配当 プロパ
 const SETTINGS = {
   1: { big: 292, reg: 489 },
   2: { big: 280, reg: 452 },
   3: { big: 268, reg: 420 },
   4: { big: 257, reg: 390 },
   5: { big: 244, reg: 360 },
-  6: { big: 2, reg: 30 },
+  6: { big: 1, reg: 0 },
 };
 const PAYOUT = { big: 350, reg: 120 };
 let currentSetting = 1;
@@ -328,14 +328,17 @@ function glowHibiscus(typeOrPattern = 'normal') {
   if (typeOrPattern === 'big') {
     if (nextGameForceNormal) { pattern = 'glow-normal'; nextGameForceNormal = false; }
     else {
-      // 75%: 通常点滅, 25%: プレミア（葉っぱ点滅は超レア）
-      const premiumIds = [2,3,4,5,6,7,8,9,10,11,12,13];
+      // 75%: 通常点滅, 25%: プレミア
+      // プレミアのうち10%を超プレミア（回転/葉）に振分 → 全体2.5%
+      const premiumIds = [2,3,4,5,6,7,8,9,10,11,12]; // 通常プレミア
+      const ultraIds = [13,14]; // 超プレミア
       let idx;
       if (Math.random() < 0.75) {
         idx = 1; // normal
       } else {
-        // 10% of premium chunk -> ultra premium leaf-only (~2.5% overall)
-        idx = (Math.random() < 0.10) ? 14 : premiumIds[Math.floor(Math.random()*premiumIds.length)];
+        idx = (Math.random() < 0.10)
+          ? ultraIds[Math.floor(Math.random()*ultraIds.length)]
+          : premiumIds[Math.floor(Math.random()*premiumIds.length)];
       }
       hibiscusPattern = idx; // 保存して停止タイミング演出に使用
       switch (idx) {
@@ -580,8 +583,8 @@ try {
 // Theming on load
 (function initPreferences() {
   const savedTheme = storage.load("theme", null);
-  const preferDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  if (savedTheme === "dark" || (!savedTheme && preferDark)) {
+  // Default to dark mode when no preference is saved
+  if (savedTheme === "dark" || savedTheme === null) {
     document.body.classList.add("dark");
   }
   soundEnabled = storage.load("soundEnabled", true);
@@ -644,30 +647,36 @@ function setUndoDisabled(disabled) {
   btn.setAttribute("aria-disabled", disabled);
 }
 
+// Space/Enter one‑key play: BET -> LEVER -> STOP(左→中→右)
+function handleSpacePlay() {
+  // If spinning, stop next available reel in order
+  if (isSpinning) {
+    const i = [0,1,2].find(idx => reelSpinning[idx] && !reelStopped[idx]);
+    if (i !== undefined) stopReel(i);
+    return;
+  }
+  // Not spinning: if no BET, bet max; otherwise pull lever
+  if (betCount === 0) {
+    pressBet();
+  } else {
+    pullLever();
+  }
+}
+
 document.addEventListener("keydown", (e) => {
   if (enableUndo && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault();
     undo();
+    return;
   }
   if (e.key.toLowerCase() === "r") {
     e.preventDefault();
     resetGame();
+    return;
   }
-  if (e.key === " " || e.key === "Enter") {
-    if (e.target.tagName !== "BUTTON") {
-      e.preventDefault();
-      // Prefer lever operation if available; fallback to button spin
-      const lever = document.getElementById('lever');
-      if (lever) {
-        pullLever();
-      } else if (typeof handleSpinV3 === 'function') {
-        handleSpinV3();
-      } else if (typeof handleSpinV2 === 'function') {
-        handleSpinV2();
-      } else {
-        handleSpin();
-      }
-    }
+  if ((e.key === " " || e.key === "Enter") && (!e.target || e.target.tagName !== "BUTTON")) {
+    e.preventDefault();
+    handleSpacePlay();
   }
 });
 
