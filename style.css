@@ -116,12 +116,10 @@ body.dark {
   margin: 0 auto;
   padding: 16px clamp(16px, 4vw, 32px) 32px;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr; /* ゲームを上、その他は下に縦積み */
   gap: clamp(16px, 4vw, 32px);
 }
-@media (min-width: 1000px) {
-  .app-main { grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); }
-}
+/* 以前の2カラムは廃止し、常に1カラムで上部をゲームに占有させる */
 
 .game-panel, .settings-panel, .side-panel {
   background: var(--color-surface);
@@ -311,6 +309,17 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 
 /* Reel spin scrolling */
 @keyframes spin { 0%{ transform: translateY(0%);} 100%{ transform: translateY(-50%);} }
+@keyframes spin-reverse { 0%{ transform: translateY(0%);} 100%{ transform: translateY(50%);} }
+@keyframes reel-shake { 0%,100%{ transform: translate(0,0) rotate(0);} 20%{ transform: translate(-1px,1px) rotate(-0.8deg);} 40%{ transform: translate(2px,-1px) rotate(0.6deg);} 60%{ transform: translate(-2px,1px) rotate(-0.6deg);} 80%{ transform: translate(1px,-1px) rotate(0.8deg);} }
+.reel-content.glitching { animation: reel-shake .5s steps(6,end); }
+.reel-content.reverse { animation: spin-reverse .12s linear infinite; }
+.reel-content.stall { animation-play-state: paused !important; }
+@keyframes reel-nudge { 0%{ transform: translateY(0);} 50%{ transform: translateY(-8%);} 100%{ transform: translateY(0);} }
+.reel-content.nudge { animation: reel-nudge .14s ease-out 1; }
+
+/* Screen flash overlay for premium */
+.flash-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.0); pointer-events: none; z-index: 9999; animation: flash-burst .18s ease-out 1; }
+@keyframes flash-burst { 0%{ background: rgba(255,255,255,0); } 30%{ background: rgba(255,255,255,0.9);} 100%{ background: rgba(255,255,255,0);} }
 
 /* Cabinet-like front panel */
 .cabinet-panel {

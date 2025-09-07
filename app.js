@@ -4,7 +4,7 @@ const symbols = ["🍒", "🍋", "⭐", "🍇", "🔔", "7️⃣"]; // legacy
 const symbolsManual = ['7', 'BAR', '🔔', '🍇', '🍒', '🍋'];
 const spinDuration = 600;
 const costPerSpin = 3;
-const enableUndo = true;
+const enableUndo = false; // Undo feature disabled; button hidden
 
 let coinBalance = 100;
 let isSpinning = false;
@@ -22,22 +22,23 @@ let pendingBonus = null; // 'big' | 'reg' | null
 let hibiscusPattern = null; // current premium pattern id
 let hibiscusMute = false; // pattern2: mute at lever-on
 let nextGameForceNormal = false; // pattern9 behavior
+let freezeActive = false; // running premium freeze sequence
 function setLeverEngaged(on) {
   try {
     const leverBtn = document.getElementById('lever');
     if (leverBtn) leverBtn.classList.toggle('engaged', !!on);
   } catch {}
 }
-// 設定（1〜6）の確率テーブルと配当 プロパ
+// 設定（1〜6）の確率テーブルと配当
 const SETTINGS = {
-  1: { big: 292, reg: 489 },
-  2: { big: 280, reg: 452 },
-  3: { big: 268, reg: 420 },
-  4: { big: 257, reg: 390 },
-  5: { big: 244, reg: 360 },
-  6: { big: 1, reg: 0 },
+  1: { big: 292, reg: 489, freeze: 8192 },
+  2: { big: 280, reg: 452, freeze: 8192 },
+  3: { big: 268, reg: 420, freeze: 8192 },
+  4: { big: 257, reg: 390, freeze: 8192 },
+  5: { big: 244, reg: 360, freeze: 8192 },
+  6: { big: 2,   reg: 30,  freeze: 3 }, // デモ用高設定
 };
-const PAYOUT = { big: 350, reg: 120 };
+const PAYOUT = { big: 350, reg: 120, freeze: 2000 };
 let currentSetting = 1;
 
 // Utilities: persistence
@@ -124,6 +125,26 @@ function playKyuin() {
   } catch (e) {
     console.warn("Web Audio not supported", e);
   }
+}
+
+// Freeze SFX: low rumble -> kyuin
+function playFreezeFX() {
+  try {
+    ensureAudio();
+    const now = audioCtx.currentTime;
+    // low rumble noise
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate*0.9, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<data.length;i++) { data[i] = (Math.random()*2-1) * Math.exp(-i/(data.length*0.9)); }
+    noise.buffer = buffer;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.18, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    noise.connect(g); g.connect(audioCtx.destination); noise.start(now);
+    // then kyuin
+    setTimeout(() => playKyuin(), 650);
+  } catch {}
 }
 
 // Simulate payout sound burst without per-coin crediting
@@ -381,6 +402,20 @@ function glowHibiscus(typeOrPattern = 'normal') {
     all.forEach(el => el.classList.remove(...clsAll));
     hibiscusTimer = null;
   }, 6000);
+}
+
+// Special freeze visual: rotate + green leaf + color flashes
+function glowFreeze() {
+  clearHibiscusGlow();
+  const left = document.getElementById('hibiscus');
+  const right = document.getElementById('hibiscus-right');
+  const all = [left, right].filter(Boolean);
+  all.forEach(el => el && el.classList.add('glow-rotate','glow-leaf'));
+  // burst of multi color flashes
+  const colors = ['red','blue','yellow','red','yellow'];
+  let t = 200;
+  colors.forEach((c)=>{ setTimeout(()=>flashColor(c), t); t += 220; });
+  hibiscusTimer = setTimeout(() => { clearHibiscusGlow(); }, 7000);
 }
 
 function clearHibiscusGlow() {
@@ -752,13 +787,22 @@ function handleSpinV3() {
       playSound("error");
       coinBalance += costPerSpin;
     } else {
-      // BIG/REG 抽選（設定連動）
+      // BIG/REG/フリーズ 抽選（設定連動）
       const table = SETTINGS[currentSetting] || SETTINGS[1];
+      const pFreeze = table.freeze ? 1 / table.freeze : 0;
       const pBig = 1 / table.big;
       const pReg = 1 / table.reg;
       const u = Math.random();
       let awarded = false;
-      if (u < pBig) {
+      if (u < pFreeze) {
+        setMessage("❄️ フリーズ！SUPER BIG");
+        glowFreeze();
+        playFreezeFX();
+        coinBalance += PAYOUT.freeze;
+        playPayoutBurst(PAYOUT.freeze);
+        spinReels(true);
+        awarded = true;
+      } else if (u < pFreeze + pBig) {
         setMessage("🌺 BIGボーナス！");
         glowHibiscus('big');
         playKyuin();
@@ -766,7 +810,7 @@ function handleSpinV3() {
         playPayoutBurst(PAYOUT.big);
         spinReels(true);
         awarded = true;
-      } else if (u < pBig + pReg) {
+      } else if (u < pFreeze + pBig + pReg) {
         setMessage("🌺 REGボーナス！");
         glowHibiscus('reg');
         playKyuin();
@@ -824,6 +868,7 @@ function startReel(i) {
 // Stop a reel and set final 3 symbols
 function stopReel(i) {
   if (!isSpinning || !reelSpinning[i] || reelStopped[i]) return;
+  if (pendingBonus === 'freeze' || freezeActive) return; // during freeze sequence, ignore manual stops
   ensureAudio();
   const reel = document.getElementById(`reel${i}`);
   const finalContent = document.createElement('div');
@@ -834,7 +879,7 @@ function stopReel(i) {
     // If bonus is pending, force center line based on stop order
     if (pendingBonus && r === 1) {
       const stoppedCount = reelStopped.filter(Boolean).length; // reels stopped before this stop
-      if (pendingBonus === 'big') {
+      if (pendingBonus === 'big' || pendingBonus === 'freeze') {
         sym = '7';
       } else if (pendingBonus === 'reg') {
         // First two stopped reels show 7, last stopped reel shows BAR
@@ -861,6 +906,65 @@ function stopReel(i) {
     evaluateManualOutcome();
   }
   updatePanelControls();
+}
+
+function runFreezeSequence() {
+  if (freezeActive) return;
+  freezeActive = true;
+  const reels = Array.from(document.querySelectorAll('.reel'));
+  // Step1: glitch shake +不安定なスタッター(約1.8s)
+  reels.forEach((reel) => {
+    const rc = reel.querySelector('.reel-content');
+    if (rc) rc.classList.add('glitching');
+  });
+  const rcList = reels.map(r => r.querySelector('.reel-content')).filter(Boolean);
+  const stutterSchedule = [0, 280, 560, 820, 1100, 1380, 1660];
+  stutterSchedule.forEach((t, idx) => {
+    setTimeout(() => {
+      rcList.forEach((rc, i) => {
+        if (!rc) return;
+        if (Math.random() < 0.7) { // ランダムに一瞬止める
+          rc.classList.add('stall');
+          rc.classList.add('nudge');
+          setTimeout(()=>{ rc.classList.remove('stall'); rc.classList.remove('nudge'); }, 140);
+        }
+      });
+    }, t);
+  });
+
+  // Step2: 逆回転（約1.4s）途中で小停止を挟む
+  setTimeout(() => {
+    rcList.forEach((rc) => { rc && rc.classList.remove('glitching'); rc && rc.classList.add('reverse'); });
+    const microStops = [240, 520, 820, 1080];
+    microStops.forEach((t)=>{
+      setTimeout(()=>{ rcList.forEach((rc)=>{ if (Math.random()<0.6){ rc.classList.add('stall'); setTimeout(()=> rc.classList.remove('stall'), 110);} }); }, t);
+    });
+  }, 1800);
+
+  // Step3: 強制揃い＋フラッシュ＋配当（約1.2s後）
+  setTimeout(() => {
+    rcList.forEach((rc)=> rc && rc.classList.remove('reverse'));
+    reels.forEach((reel, idx) => {
+      const finalContent = document.createElement('div');
+      finalContent.classList.add('reel-content');
+      for (let r=0;r<3;r++) {
+        const sp = document.createElement('span');
+        const sym = (r===1) ? '7' : randomSymbolManual();
+        if (String(sym).includes('7')) { sp.textContent='7'; sp.classList.add('seven'); }
+        else if (sym === 'BAR') { sp.textContent='BAR'; sp.classList.add('bar'); }
+        else { sp.textContent=sym; }
+        finalContent.appendChild(sp);
+      }
+      reel.innerHTML = '';
+      reel.appendChild(finalContent);
+      reelSpinning[idx] = false; reelStopped[idx] = true;
+    });
+    try { const ov = document.createElement('div'); ov.className='flash-overlay'; document.body.appendChild(ov); setTimeout(()=>ov.remove(), 260); } catch {}
+    setMessage('✨ プレミアム発動 → SUPER BIG！');
+    coinBalance += PAYOUT.freeze; playPayoutBurst(PAYOUT.freeze);
+    isSpinning = false; pendingBonus = null; freezeActive = false; betCount = 0;
+    updateCoinDisplay(); updateBetDisplay(); updatePanelControls(); setLeverEngaged(false);
+  }, 1800 + 1400);
 }
 
 function getReelColumnSymbolsManual() {
@@ -899,6 +1003,19 @@ function evaluateManualOutcome() {
     // 一括加算（SEなし）
     coinBalance += 350;
     playPayoutBurst(350);
+    isSpinning = false;
+    betCount = 0;
+    pendingBonus = null;
+    updateCoinDisplay();
+    updateBetDisplay();
+    updatePanelControls();
+    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    return;
+  }
+  if (pendingBonus === 'freeze') {
+    setMessage('❄️ フリーズ！SUPER BIG +2000枚');
+    coinBalance += PAYOUT.freeze;
+    playPayoutBurst(PAYOUT.freeze);
     isSpinning = false;
     betCount = 0;
     pendingBonus = null;
@@ -988,14 +1105,15 @@ function pullLever() {
   setLeverEngaged(true);
   // 抽選（設定に連動）
   const table = SETTINGS[currentSetting] || SETTINGS[1];
+  const pFreeze = table.freeze ? 1 / table.freeze : 0;
   const pBig = 1 / table.big;
   const pReg = 1 / table.reg;
   const u = Math.random();
-  pendingBonus = u < pBig ? 'big' : (u < pBig + pReg ? 'reg' : null);
+  pendingBonus = u < pFreeze ? 'freeze' : (u < pFreeze + pBig ? 'big' : (u < pFreeze + pBig + pReg ? 'reg' : null));
   // レバーオンで点灯・SE（当選時）
   if (pendingBonus) {
-    glowHibiscus(pendingBonus === 'big' ? 'big' : 'reg');
-    if (!(pendingBonus === 'big' && hibiscusMute)) playKyuin();
+    if (pendingBonus === 'freeze') { glowFreeze(); playFreezeFX(); setTimeout(runFreezeSequence, 350); }
+    else { glowHibiscus(pendingBonus === 'big' ? 'big' : 'reg'); if (!(pendingBonus === 'big' && hibiscusMute)) playKyuin(); }
     // Pattern 10 immediate delayed explosion after lever-on
     if (hibiscusPattern === 10) { setTimeout(()=>{ flashColor('red'); playExplosion(); }, 650); }
   }
