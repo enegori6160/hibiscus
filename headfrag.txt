@@ -1,0 +1,4 @@
+// Symbols and config
+const symbols = ["🍒", "🍋", "⭐", "🍇", "🔔", "7️⃣"];
+const spinDuration = 600;
+const costPerSpin 

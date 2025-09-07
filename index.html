@@ -41,8 +41,28 @@
         <div class="hibiscus-side" id="hibiscus-right" aria-hidden="true"></div>
       </div>
 
+      <div class="cabinet-panel" role="group" aria-label="操作パネル">
+        <div class="panel-left">
+          <button id="betButton" class="bet">BET</button>
+          <div class="meter"><span>BET：</span><strong id="betCount">0</strong></div>
+        </div>
+        <div class="panel-center">
+          <button id="stop0" class="stop" aria-label="左停止">●</button>
+          <button id="stop1" class="stop" aria-label="中停止">●</button>
+          <button id="stop2" class="stop" aria-label="右停止">●</button>
+        </div>
+        <div class="panel-right">
+          <button id="lever" class="lever joystick" aria-label="レバー">
+            <span class="lever-base" aria-hidden="true"></span>
+            <span class="lever-stick" aria-hidden="true"></span>
+            <span class="lever-ball" aria-hidden="true"></span>
+            <span class="sr-only">レバー</span>
+          </button>
+        </div>
+      </div>
+
       <div class="controls" role="group" aria-label="操作ボタン">
-        <button id="spinButton" aria-label="スピンする" class="primary">スピン</button>
+        <button id="spinButton" aria-label="スピンする" class="primary" style="display:none">スピン</button>
         <button id="undoButton" aria-label="直前の操作を取り消す" disabled>取り消し</button>
         <button id="resetButton" aria-label="ゲームをリセット">リセット</button>
       </div>
@@ -55,10 +75,10 @@
       <h2 id="howtoHeading">遊び方</h2>
       <ul class="howto-list">
         <li>スピンは1回3枚消費します。</li>
-        <li>ランダムでボーナス（約33%）が発生します。</li>
-        <li>ボーナス時はハイビスカスが点灯し、コインを獲得します。</li>
-        <li>取り消しで直前の状態に戻せます。</li>
-        <li>スペース/Enterでもスピンできます。</li>
+        <li>「設定（1〜6）」でBIG/REGの当選率が変わります（選択は自動保存）。</li>
+        <li>当選時はハイビスカスが点灯し、BIGは+350枚、REGは+120枚を獲得します。</li>
+        <li>取り消しで直前の状態に戻せます。スペース/Enterでもスピン可能。</li>
+        <li>テーマとサウンドはヘッダーまたは設定パネルから切替できます。</li>
       </ul>
     </aside>
 

@@ -166,7 +166,12 @@ body.dark {
   font-weight: 700;
   user-select: none;
 }
-.seven { color: var(--color-primary); }
+.reel span.bar { background: #111827; color: #fff; border-radius: 6px; padding: 2px 8px; letter-spacing: .08em; }
+.seven {
+  color: #ef4444; /* vivid red */
+  text-shadow: 0 1px 0 rgba(0,0,0,.25), 0 0 8px rgba(239,68,68,.35);
+  font-weight: 800;
+}
 
 .message { font-weight: 700; margin-top: 8px; min-height: 1.6em; opacity: 0; transform: translateY(6px); transition: opacity .25s ease, transform .25s ease; }
 .message.show { opacity: 1; transform: translateY(0); }
@@ -203,20 +208,126 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   filter: saturate(.7) brightness(.95);
   transition: opacity .2s ease, filter .2s ease, transform .2s ease;
 }
-.hibiscus-side.glowing {
+.hibiscus-side.glowing,
+.hibiscus-side.glow-normal {
   background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.35) 0%, rgba(255,0,0,0.22) 40%, transparent 75%);
   box-shadow: 0 0 14px rgba(255,0,0,0.65), 0 0 32px rgba(255,0,0,0.5), 0 0 60px rgba(255,0,0,0.35);
   animation: hibiscus-blink .44s steps(2, jump-none) infinite, pulse-glow 1.1s ease-in-out infinite;
 }
-.hibiscus-side.glowing::before {
+.hibiscus-side.glowing::before,
+.hibiscus-side.glow-normal::before,
+.hibiscus-side.glow-strobe::before,
+.hibiscus-side.glow-breathe::before,
+.hibiscus-side.glow-wave::before,
+.hibiscus-side.glow-twinkle::before,
+.hibiscus-side.glow-steady::before,
+.hibiscus-side.glow-ultraslow::before,
+.hibiscus-side.glow-rotate::before {
   opacity: 1;
   filter: saturate(1.25) brightness(1.1) drop-shadow(0 0 6px rgba(255,0,0,.55)) drop-shadow(0 0 14px rgba(255,0,0,.4));
 }
+.hibiscus-side.glow-strobe {
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.45) 0%, rgba(255,0,0,0.28) 40%, transparent 75%);
+  box-shadow: 0 0 18px rgba(255,0,0,0.8), 0 0 46px rgba(255,0,0,0.6), 0 0 72px rgba(255,0,0,0.45);
+  animation: strobe 0.18s steps(2, jump-none) infinite;
+}
+.hibiscus-side.glow-breathe {
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.32) 0%, rgba(255,0,0,0.2) 40%, transparent 75%);
+  box-shadow: 0 0 18px rgba(255,0,0,0.6), 0 0 38px rgba(255,0,0,0.45);
+  animation: pulse-glow 1.6s ease-in-out infinite;
+}
+.hibiscus-side.glow-wave {
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.36) 0%, rgba(255,0,0,0.24) 40%, transparent 75%);
+  box-shadow: 0 0 16px rgba(255,0,0,0.7), 0 0 40px rgba(255,0,0,0.5);
+  animation: hibiscus-blink .44s steps(2, jump-none) infinite;
+}
+.hibiscus-side.wave-a { animation-delay: 0s; }
+.hibiscus-side.wave-b { animation-delay: .22s; }
+.hibiscus-side.glow-twinkle {
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.4) 0%, rgba(255,0,0,0.26) 40%, transparent 75%);
+  box-shadow: 0 0 20px rgba(255,0,0,0.78), 0 0 56px rgba(255,0,0,0.55);
+  animation: twinkle 0.12s steps(2, jump-none) infinite, pulse-glow 1.2s ease-in-out infinite;
+}
+.hibiscus-side.glow-steady {
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.5) 0%, rgba(255,0,0,0.28) 40%, transparent 75%);
+  box-shadow: 0 0 22px rgba(255,0,0,0.85), 0 0 64px rgba(255,0,0,0.6);
+}
+.hibiscus-side.glow-ultraslow {
+  background: radial-gradient(circle at 50% 50%, rgba(255,0,0,0.35) 0%, rgba(255,0,0,0.22) 40%, transparent 75%);
+  animation: hibiscus-blink 2.2s steps(2, jump-none) infinite;
+}
+.hibiscus-side.flash-red,
+.hibiscus-side.flash-blue,
+.hibiscus-side.flash-yellow {
+  animation: color-flash .42s ease-out 1;
+}
+
+@keyframes color-flash {
+  0% { box-shadow: 0 0 12px rgba(255,0,0,0.0); filter: brightness(1); }
+  20% { box-shadow: 0 0 28px var(--flash-color, rgba(255,0,0,0.9)); filter: brightness(1.2); }
+  100% { box-shadow: 0 0 6px rgba(255,0,0,0.0); filter: brightness(1); }
+}
+.flash-red { --flash-color: rgba(255,60,60,0.95) !important; }
+.flash-blue { --flash-color: rgba(80,160,255,0.95) !important; }
+.flash-yellow { --flash-color: rgba(255,224,60,0.95) !important; }
+
+/* Premium: rotate the flower */
+.hibiscus-side.glow-rotate { animation: pulse-glow 1.2s ease-in-out infinite; }
+.hibiscus-side.glow-rotate::before { animation: rotate-hibi 2.6s linear infinite; transform-origin: 50% 50%; }
+@keyframes rotate-hibi { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
 @keyframes hibiscus-blink { 0%,100%{opacity:1;} 50%{opacity:.22;} }
 @keyframes pulse-glow { 0%{ transform: scale(1);} 50%{ transform: scale(1.08);} 100%{ transform: scale(1);} }
+@keyframes strobe { 0%,100%{filter: saturate(1.3) brightness(1.1);} 50%{ filter: saturate(1.3) brightness(0.6);} }
+@keyframes twinkle { 0%,100%{opacity:1;} 50%{opacity:.2;} }
 
 /* Reel spin scrolling */
 @keyframes spin { 0%{ transform: translateY(0%);} 100%{ transform: translateY(-50%);} }
+
+/* Cabinet-like front panel */
+.cabinet-panel {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #2b2f3a, #1b1e27);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: inset 0 4px 10px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.2);
+}
+.cabinet-panel .panel-left, .cabinet-panel .panel-right, .cabinet-panel .panel-center {
+  display: inline-flex; align-items: center; gap: 10px; justify-content: center;
+}
+.cabinet-panel .meter { color: #e5e7eb; font-weight: 700; }
+.cabinet-panel .meter strong { font-size: 1.1rem; }
+
+.cabinet-panel .bet {
+  background: radial-gradient(circle at 30% 30%, #ff6363, #c81e1e);
+  color: #fff; border-radius: 999px; padding: 10px 18px; font-weight: 800; letter-spacing: .06em; box-shadow: 0 4px 8px rgba(0,0,0,.35), inset 0 2px 6px rgba(255,255,255,.25);
+}
+.cabinet-panel .stop {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ff4d4d, #b91c1c);
+  color: #fff; font-size: 1.1rem; font-weight: 800; border: none; box-shadow: 0 6px 12px rgba(0,0,0,.4), inset 0 3px 8px rgba(255,255,255,.25);
+}
+.cabinet-panel .stop:disabled { filter: grayscale(.35) brightness(.8); opacity: .7; }
+
+/* Joystick-style lever */
+.cabinet-panel .lever.joystick { position: relative; width: 96px; height: 96px; background: none; border: none; box-shadow: none; padding: 0; }
+.lever.joystick .lever-base { position: absolute; inset: 2px; border-radius: 50%; background:
+  radial-gradient(circle at 50% 50%, #111827 0 24%, transparent 25%),
+  conic-gradient(from 200deg, rgba(255,255,255,.18), rgba(255,255,255,0) 60%),
+  radial-gradient(circle at 50% 50%, #475569 0 60%, #1f2937 61% 100%);
+  box-shadow: inset 0 8px 12px rgba(0,0,0,.35), 0 6px 16px rgba(0,0,0,.35);
+}
+.lever.joystick .lever-base::after{ content:""; position:absolute; left:50%; top:10%; transform: translateX(-50%); width:26px; height:78%; border-radius: 14px; background: linear-gradient(180deg, rgba(15,23,42,.65), rgba(15,23,42,.25)); box-shadow: inset 0 6px 10px rgba(0,0,0,.35), inset 0 -8px 12px rgba(255,255,255,.08); }
+.lever.joystick .lever-stick { position: absolute; left: 50%; top: 16%; width: 18px; height: 60px; transform: translateX(-50%); border-radius: 12px; background: linear-gradient(180deg, #ffffff, #cdd6e1); box-shadow: inset 0 2px 6px rgba(255,255,255,.6), inset 0 -6px 10px rgba(15,23,42,.2); transition: top .16s ease; }
+.lever.joystick .lever-ball { position: absolute; left: 50%; top: 56%; transform: translate(-50%, 0); width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6, #fff0 42%), radial-gradient(circle at 50% 50%, #ff834d 0, #f97316 60%, #b45309 100%); box-shadow: 0 6px 10px rgba(0,0,0,.35), inset 0 3px 8px rgba(255,255,255,.35); transition: top .16s ease, transform .16s ease; }
+.lever.joystick:hover .lever-ball { transform: translate(-50%, 1px) scale(1.02); }
+.lever.joystick:active .lever-ball, .lever.joystick.engaged .lever-ball { top: 78%; transform: translate(-50%, 0) scale(.98); }
+.lever.joystick:active .lever-stick, .lever.joystick.engaged .lever-stick { top: 34%; }
+.lever.joystick:focus-visible { outline: 2px solid #60a5fa; outline-offset: 3px; border-radius: 12px; }
 
 /* How to / Settings */
 .howto-list { margin: 0; padding-left: 1.2rem; }

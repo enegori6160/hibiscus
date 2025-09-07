@@ -1,5 +1,7 @@
 // Symbols and config
-const symbols = ["🍒", "🍋", "⭐", "🍇", "🔔", "7️⃣"];
+const symbols = ["🍒", "🍋", "⭐", "🍇", "🔔", "7️⃣"]; // legacy
+// Manual mode symbols (BAR入り)
+const symbolsManual = ['7', 'BAR', '🔔', '🍇', '🍒', '🍋'];
 const spinDuration = 600;
 const costPerSpin = 3;
 const enableUndo = true;
@@ -10,6 +12,16 @@ let lastState = null;
 let soundEnabled = true;
 let audioCtx;
 let hibiscusTimer = null;
+// Manual mode states
+let betCount = 0;
+const maxBet = 3;
+const reelSpinning = [false, false, false];
+const reelStopped = [true, true, true];
+let manualModeActive = true; // use lever + stop buttons
+let pendingBonus = null; // 'big' | 'reg' | null
+let hibiscusPattern = null; // current premium pattern id
+let hibiscusMute = false; // pattern2: mute at lever-on
+let nextGameForceNormal = false; // pattern9 behavior
 // 設定（1〜6）の確率テーブルと配当
 const SETTINGS = {
   1: { big: 292, reg: 489 },
@@ -17,7 +29,7 @@ const SETTINGS = {
   3: { big: 268, reg: 420 },
   4: { big: 257, reg: 390 },
   5: { big: 244, reg: 360 },
-  6: { big: 232, reg: 332 },
+  6: { big: 2, reg: 30 },
 };
 const PAYOUT = { big: 350, reg: 120 };
 let currentSetting = 1;
@@ -28,22 +40,36 @@ const storage = {
   load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
 };
 
+function ensureAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      // resume on user gesture
+      audioCtx.resume && audioCtx.resume();
+    }
+  } catch {}
+}
+
 function playSound(type) {
   if (!soundEnabled) return;
   try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    ensureAudio();
+    // test hook
+    try { if (typeof window !== 'undefined' && window._onPlaySound) window._onPlaySound(type); } catch {}
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     const now = audioCtx.currentTime;
-    const freq = type === "win" ? 880 : type === "error" ? 220 : 440;
-    osc.type = "sine";
+    const freq = type === "win" ? 880 : type === "error" ? 220 : type === 'coin' ? 1200 : 440;
+    osc.type = type === 'coin' ? 'square' : 'sine';
     osc.frequency.setValueAtTime(freq, now);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    gain.gain.setValueAtTime(0.12, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    const dur = type === 'coin' ? 0.1 : 0.25;
+    const amp = type === 'coin' ? 0.12 : 0.12;
+    gain.gain.setValueAtTime(amp, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
     osc.start(now);
-    osc.stop(now + 0.25);
+    osc.stop(now + dur);
   } catch (e) {
     console.warn("Web Audio not supported", e);
   }
@@ -53,7 +79,7 @@ function playSound(type) {
 function playKyuin() {
   if (!soundEnabled) return;
   try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    ensureAudio();
     const now = audioCtx.currentTime;
 
     const chirp = (startF, endF, dur, delay, type = "sawtooth", peak = 0.22) => {
@@ -94,6 +120,21 @@ function playKyuin() {
   }
 }
 
+// Simulate payout sound burst without per-coin crediting
+function playPayoutBurst(amount) {
+  if (!soundEnabled) return;
+  try {
+    // number of coin ticks proportional to amount but capped
+    const ticks = Math.min(40, Math.max(8, Math.floor(amount / 10)));
+    let i = 0;
+    const iv = setInterval(() => {
+      playSound('coin');
+      i += 1;
+      if (i >= ticks) clearInterval(iv);
+    }, 30);
+  } catch {}
+}
+
 function setMessage(text, isError = false) {
   const msg = document.getElementById("message");
   msg.innerText = text;
@@ -128,6 +169,7 @@ function toggleTheme() {
 }
 
 function toggleSound() {
+  ensureAudio();
   if (soundEnabled) playSound("click");
   soundEnabled = !soundEnabled;
   reflectSoundButtons();
@@ -141,6 +183,32 @@ function toggleNav() {
   const open = !nav.classList.contains("open");
   nav.classList.toggle("open", open);
   btn.setAttribute("aria-expanded", String(open));
+}
+
+// Weighted symbol distribution to target ~1/8 small-win rate across 3 lines (legacy)
+const SYMBOL_WEIGHTS = { '🍒': 2, '🍋': 2, '⭐': 4, '🍇': 2, '🔔': 2, '7': 1 };
+const SYMBOL_LIST = Object.keys(SYMBOL_WEIGHTS);
+const SYMBOL_TOTAL = SYMBOL_LIST.reduce((s, k) => s + SYMBOL_WEIGHTS[k], 0);
+function randomSymbol() {
+  const r = Math.random() * SYMBOL_TOTAL;
+  let acc = 0;
+  for (const k of SYMBOL_LIST) {
+    acc += SYMBOL_WEIGHTS[k];
+    if (r < acc) return k;
+  }
+  return SYMBOL_LIST[SYMBOL_LIST.length - 1];
+}
+
+// Manual mode random symbol (BAR含む)
+const MANUAL_WEIGHTS = { '7': 1, 'BAR': 1, '🔔': 2, '🍇': 2, '🍒': 3, '🍋': 2 };
+const MANUAL_LIST = Object.keys(MANUAL_WEIGHTS);
+const MANUAL_TOTAL = MANUAL_LIST.reduce((s,k)=>s+MANUAL_WEIGHTS[k],0);
+function randomSymbolManual() {
+  // Weighted distribution to keep小役やや出やすく
+  const r = Math.random() * MANUAL_TOTAL;
+  let acc = 0;
+  for (const k of MANUAL_LIST) { acc += MANUAL_WEIGHTS[k]; if (r < acc) return k; }
+  return MANUAL_LIST[MANUAL_LIST.length-1];
 }
 
 // Reel logic
@@ -160,6 +228,8 @@ function spinReels(isBonus = false) {
 
     reel.innerHTML = "";
     reel.appendChild(reelContent);
+    // Normalize any keycap sevens in the scrolling filler
+    normalizeSevens(reelContent);
     reelContent.style.animation = "spin 0.2s linear infinite";
 
     setTimeout(() => {
@@ -187,17 +257,139 @@ function spinReels(isBonus = false) {
 
       reel.innerHTML = "";
       reel.appendChild(finalContent);
+      // Normalize 7 display and reweight non-7 symbols using randomSymbol()
+      normalizeSevens(finalContent);
+      try {
+        finalContent.querySelectorAll('span').forEach((el) => {
+          const t = el.textContent || '';
+          if (!t.includes('7')) {
+            const sym = randomSymbol();
+            if (sym.includes('7')) { el.textContent = '7'; el.classList.add('seven'); }
+            else { el.textContent = sym; }
+          }
+        });
+      } catch {}
     }, spinDuration);
   });
 }
 
-function glowHibiscus() {
+function normalizeSevens(root) {
+  try {
+    root.querySelectorAll('span').forEach((el) => {
+      const t = el.textContent || '';
+      if (t.includes('7')) {
+        el.textContent = '7';
+        el.classList.add('seven');
+      }
+    });
+} catch {}
+}
+
+// 絵文字のバリアント差などを吸収して判定用に正規化
+function canonicalSymbol(t) {
+  if (!t) return '';
+  if (t.includes('7')) return '7';
+  if (t.includes('BAR')) return 'BAR';
+  if (t.includes('⭐')) return '⭐'; // ⭐と⭐️を統一
+  if (t.includes('🔔')) return '🔔';
+  if (t.includes('🍇')) return '🍇';
+  if (t.includes('🍋')) return '🍋';
+  if (t.includes('🍒')) return '🍒';
+  return t.trim();
+}
+
+// Any-line evaluation helpers
+function getAllLineSymbols() {
+  const reels = Array.from(document.querySelectorAll('.reel'));
+  const rows = [0, 1, 2];
+  return rows.map((row) => reels.map((reel) => {
+    const spans = reel.querySelectorAll('.reel-content span');
+    const t = spans[row] ? (spans[row].textContent || '') : '';
+    return canonicalSymbol(t);
+  }));
+}
+
+function evaluateLineWin(symbols) {
+  if (!symbols || symbols.length !== 3) return null;
+  const [a, b, c] = symbols;
+  if (a === b && b === c) {
+    switch (a) {
+      case '🔔': return { type: 'bell', symbol: '🔔', payout: 15 };
+      case '🍇': return { type: 'grape', symbol: '🍇', payout: 12 };
+      case '🍋': return { type: 'lemon', symbol: '🍋', payout: 6 };
+      case '🍒': return { type: 'cherry', symbol: '🍒', payout: 4 };
+      case '⭐': return { type: 'replay', symbol: '⭐', payout: 0, replay: true };
+      default: return null;
+    }
+  }
+  return null;
+}
+
+function evaluateAllLines() {
+  const lines = getAllLineSymbols();
+  const results = lines.map(evaluateLineWin).filter(Boolean);
+  let total = 0; let hasReplay = false; const msgs = [];
+  for (const r of results) {
+    if (r.replay) { hasReplay = true; }
+    else { total += r.payout; msgs.push(`${r.symbol} 揃い +${r.payout}枚`); }
+  }
+  return { total, hasReplay, messages: msgs };
+}
+
+function glowHibiscus(typeOrPattern = 'normal') {
   clearTimeout(hibiscusTimer);
   const left = document.getElementById("hibiscus");
   const right = document.getElementById("hibiscus-right");
-  [left, right].forEach(el => el && el.classList.add("glowing"));
+  const all = [left, right].filter(Boolean);
+  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
+  all.forEach(el => el.classList.remove(...clsAll));
+
+  // decide pattern
+  let pattern = 'glow-normal';
+  hibiscusMute = false;
+  if (typeOrPattern === 'big') {
+    if (nextGameForceNormal) { pattern = 'glow-normal'; nextGameForceNormal = false; }
+    else {
+      // Choose from 13 patterns (including rotate premium)
+      const idx = Math.floor(Math.random()*13) + 1; // 1..13
+      hibiscusPattern = idx;
+      switch (idx) {
+        case 1: pattern = 'glow-normal'; break; // 通常
+        case 2: pattern = 'glow-normal'; hibiscusMute = true; break; // 無音＋通常
+        case 3: pattern = 'glow-strobe'; break; // 高速
+        case 4: pattern = 'glow-twinkle'; break; // ﾒﾗﾒﾗ相当
+        case 5: pattern = 'glow-breathe'; break; // ﾎﾞﾜｧ～
+        case 6: pattern = 'glow-normal'; scheduleBeat337(all); break; // 3,3,7拍子
+        case 7: pattern = 'glow-wave'; // 右から点滅
+                left && left.classList.add('wave-b');
+                right && right.classList.add('wave-a');
+                break;
+        case 8: pattern = 'glow-steady'; break; // 点灯
+        case 9: pattern = 'glow-ultraslow'; nextGameForceNormal = true; break; // 超低速→次回通常
+        case 10: pattern = 'glow-normal'; setTimeout(()=>flashColor('red'), 650); break; // 爆発
+        case 11: pattern = 'glow-normal'; break; // 第一停止で青ﾌﾗｯｼｭ（stopで処理）
+        case 12: pattern = 'glow-normal'; break; // 第二停止で黄ﾌﾗｯｼｭ（stopで処理）
+        case 13: pattern = 'glow-rotate'; break; // 回転プレミア
+        default: pattern = 'glow-normal';
+      }
+    }
+  } else if (typeOrPattern === 'reg') {
+    pattern = 'glow-normal';
+  } else if (typeof typeOrPattern === 'string' && typeOrPattern.startsWith('glow-')) {
+    pattern = typeOrPattern; // direct pattern name
+  } else {
+    pattern = 'glow-normal';
+  }
+
+  if (pattern === 'glow-wave') {
+    left && left.classList.add('glow-wave','wave-a');
+    right && right.classList.add('glow-wave','wave-b');
+  } else {
+    all.forEach(el => el.classList.add(pattern));
+  }
+
   hibiscusTimer = setTimeout(() => {
-    [left, right].forEach(el => el && el.classList.remove("glowing"));
+    all.forEach(el => el.classList.remove(...clsAll));
     hibiscusTimer = null;
   }, 6000);
 }
@@ -207,8 +399,40 @@ function clearHibiscusGlow() {
   hibiscusTimer = null;
   const left = document.getElementById("hibiscus");
   const right = document.getElementById("hibiscus-right");
-  [left, right].forEach(el => el && el.classList.remove("glowing"));
+  const all = [left, right].filter(Boolean);
+  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
+  all.forEach(el => el.classList.remove(...clsAll));
+  hibiscusPattern = null; hibiscusMute = false;
 }
+
+function flashColor(color) {
+  const left = document.getElementById('hibiscus');
+  const right = document.getElementById('hibiscus-right');
+  const all = [left, right].filter(Boolean);
+  const cls = color === 'blue' ? 'flash-blue' : color === 'yellow' ? 'flash-yellow' : 'flash-red';
+  all.forEach(el => {
+    el.classList.remove('flash-red','flash-blue','flash-yellow');
+    el.classList.add(cls);
+    setTimeout(()=> el.classList.remove(cls), 420);
+  });
+}
+
+function scheduleBeat337(allEls) {
+  // simple JS sequence: 3 flashes, pause, 3 flashes, pause, 7 flashes
+  const seq = [3, 3, 7];
+  let t = 0; const gap = 80; const pause = 280;
+  seq.forEach((n, idx) => {
+    for (let i=0;i<n;i++) {
+      setTimeout(()=>flashColor('red'), t); t += gap;
+    }
+    t += pause;
+  });
+}
+
+// Extra SFX for premium patterns
+function playExplosion() { try { ensureAudio(); const now = audioCtx.currentTime; const noise = audioCtx.createBufferSource(); const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate*0.35, audioCtx.sampleRate); const data = buffer.getChannelData(0); for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/(data.length*0.7)); } noise.buffer = buffer; const gain = audioCtx.createGain(); gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.35); noise.connect(gain); gain.connect(audioCtx.destination); noise.start(); } catch {} }
+function playWaveFX() { try { ensureAudio(); const now = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(180, now); osc.frequency.linearRampToValueAtTime(120, now+0.5); gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.6); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now+0.6);} catch {} }
+function playThunderFX() { try { ensureAudio(); const now = audioCtx.currentTime; const noise = audioCtx.createBufferSource(); const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate*0.6, audioCtx.sampleRate); const data = buffer.getChannelData(0); for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/(data.length*0.5)); } const osc = audioCtx.createOscillator(); osc.type='sine'; osc.frequency.setValueAtTime(90, now); osc.frequency.exponentialRampToValueAtTime(40, now+0.6); const g1 = audioCtx.createGain(); const g2 = audioCtx.createGain(); g1.gain.setValueAtTime(0.18, now); g1.gain.exponentialRampToValueAtTime(0.001, now+0.6); g2.gain.setValueAtTime(0.12, now); g2.gain.exponentialRampToValueAtTime(0.001, now+0.6); noise.buffer=buffer; noise.connect(g1); osc.connect(g2); g1.connect(audioCtx.destination); g2.connect(audioCtx.destination); noise.start(); osc.start(); noise.stop(now+0.6); osc.stop(now+0.6);} catch {} }
 
 function updateCoinDisplay() {
   const spinBtn = document.getElementById("spinButton");
@@ -242,8 +466,10 @@ function handleSpin() {
 
   spinReels();
 
+  // 少し余裕を持って停止後の最終出目を評価する（タイミング競合対策）
+  // Evaluate slightly after reels stop to avoid timing races
   setTimeout(() => {
-    const isError = Math.random() < 0.05;
+    const isError = false; // remove random error simulation
     if (isError) {
       setMessage("エラーが発生しました", true);
       playSound("error");
@@ -264,13 +490,15 @@ function handleSpin() {
     spinBtn.removeAttribute("aria-busy");
     updateCoinDisplay();
     setUndoDisabled(!lastState);
-  }, spinDuration);
+  }, spinDuration + 50);
 }
 
-document.getElementById("spinButton").addEventListener("click", handleSpin);
-document.getElementById("resetButton").addEventListener("click", resetGame);
-document.getElementById("themeToggle").addEventListener("click", toggleTheme);
-document.getElementById("soundToggle").addEventListener("click", toggleSound);
+try {
+  const _sb = document.getElementById("spinButton"); if (_sb) _sb.addEventListener("click", handleSpin);
+  const _rb = document.getElementById("resetButton"); if (_rb) _rb.addEventListener("click", resetGame);
+  const _tt = document.getElementById("themeToggle"); if (_tt) _tt.addEventListener("click", toggleTheme);
+  const _st = document.getElementById("soundToggle"); if (_st) _st.addEventListener("click", toggleSound);
+} catch {}
 
 // Duplicate controls in settings panel
 document.addEventListener("click", (e) => {
@@ -279,7 +507,7 @@ document.addEventListener("click", (e) => {
 });
 
 // Nav toggle
-document.getElementById("navToggle").addEventListener("click", toggleNav);
+try { const _nv = document.getElementById("navToggle"); if (_nv) _nv.addEventListener("click", toggleNav); } catch {}
 document.querySelectorAll('#siteNav .nav-link').forEach((a) => a.addEventListener('click', () => {
   const nav = document.getElementById('siteNav');
   if (nav.classList.contains('open')) toggleNav();
@@ -321,7 +549,7 @@ function handleSpinV2() {
   spinReels();
 
   setTimeout(() => {
-    const isError = Math.random() < 0.05;
+    const isError = false; // remove random error simulation
     if (isError) {
       setMessage("エラーが発生しました", true);
       playSound("error");
@@ -351,7 +579,7 @@ function handleSpinV2() {
     spinBtn.removeAttribute("aria-busy");
     updateCoinDisplay();
     setUndoDisabled(!lastState);
-  }, spinDuration);
+  }, spinDuration + 50);
 }
 
 // 既存のクリックハンドラを置き換え
@@ -374,11 +602,18 @@ try {
   coinBalance = storage.load("coinBalance", 100);
   reflectThemeButtons();
   reflectSoundButtons();
+  // Unlock audio on first user interaction
+  try {
+    ['pointerdown','keydown','touchstart','click'].forEach((ev)=>{
+      document.addEventListener(ev, () => { try { ensureAudio(); } catch {} }, { once: true, passive: true });
+    });
+  } catch {}
 })();
 
 function resetGame() {
   if (isSpinning) return;
   coinBalance = 100;
+  betCount = 0;
   lastState = null;
   setMessage("ゲームをリセットしました");
   playSound("click");
@@ -387,6 +622,8 @@ function resetGame() {
   clearHibiscusGlow();
   updateCoinDisplay();
   setUndoDisabled(true);
+  updateBetDisplay();
+  updatePanelControls();
 }
 
 function saveState() {
@@ -433,9 +670,401 @@ document.addEventListener("keydown", (e) => {
   if (e.key === " " || e.key === "Enter") {
     if (e.target.tagName !== "BUTTON") {
       e.preventDefault();
-      handleSpin();
+      // Prefer lever operation if available; fallback to button spin
+      const lever = document.getElementById('lever');
+      if (lever) {
+        pullLever();
+      } else if (typeof handleSpinV3 === 'function') {
+        handleSpinV3();
+      } else if (typeof handleSpinV2 === 'function') {
+        handleSpinV2();
+      } else {
+        handleSpin();
+      }
     }
   }
 });
 
 updateCoinDisplay();
+
+// --- Enhancements: 7 正規化 + 小役/リプレイ判定付きのスピン関数 ---
+function normalizeSevens(root) {
+  try {
+    root.querySelectorAll('span').forEach((el) => {
+      const t = el.textContent || '';
+      if (t.includes('7')) {
+        el.textContent = '7';
+        el.classList.add('seven');
+      }
+    });
+  } catch {}
+}
+
+function getCenterLineSymbols() {
+  const reels = Array.from(document.querySelectorAll('.reel'));
+  return reels.map((reel) => {
+    const spans = reel.querySelectorAll('.reel-content span');
+    if (spans.length >= 2) {
+      const t = spans[1].textContent || '';
+      return t.includes('7') ? '7' : t;
+    }
+    return '';
+  });
+}
+
+function evaluateLineWin(symbols) {
+  if (!symbols || symbols.length !== 3) return null;
+  const [a, b, c] = symbols;
+  if (a === b && b === c) {
+    switch (a) {
+      case '🔔': return { type: 'bell', symbol: '🔔', payout: 15 };
+      case '🍇': return { type: 'grape', symbol: '🍇', payout: 12 };
+      case '🍋': return { type: 'lemon', symbol: '🍋', payout: 6 };
+      case '🍒': return { type: 'cherry', symbol: '🍒', payout: 4 };
+      case '⭐': return { type: 'replay', symbol: '⭐', payout: 0, replay: true };
+      default: return null;
+    }
+  }
+  return null;
+}
+
+function handleSpinV3() {
+  if (isSpinning) return;
+  if (coinBalance < costPerSpin) {
+    setMessage("コインが足りません", true);
+    playSound("error");
+    return;
+  }
+
+  saveState();
+  isSpinning = true;
+  const spinBtn = document.getElementById("spinButton");
+  spinBtn.setAttribute("aria-busy", "true");
+  setMessage("スピン中…");
+  playSound("click");
+  clearHibiscusGlow();
+
+  coinBalance -= costPerSpin;
+  updateCoinDisplay();
+
+  // 通常回転
+  spinReels();
+
+  setTimeout(() => {
+    const isError = false; // remove random error simulation
+    if (isError) {
+      setMessage("エラーが発生しました", true);
+      playSound("error");
+      coinBalance += costPerSpin;
+    } else {
+      // BIG/REG 抽選（設定連動）
+      const table = SETTINGS[currentSetting] || SETTINGS[1];
+      const pBig = 1 / table.big;
+      const pReg = 1 / table.reg;
+      const u = Math.random();
+      let awarded = false;
+      if (u < pBig) {
+        setMessage("🌺 BIGボーナス！");
+        glowHibiscus('big');
+        playKyuin();
+        coinBalance += PAYOUT.big;
+        playPayoutBurst(PAYOUT.big);
+        spinReels(true);
+        awarded = true;
+      } else if (u < pBig + pReg) {
+        setMessage("🌺 REGボーナス！");
+        glowHibiscus('reg');
+        playKyuin();
+        coinBalance += PAYOUT.reg;
+        playPayoutBurst(PAYOUT.reg);
+        spinReels(true);
+        awarded = true;
+      }
+
+      if (!awarded) {
+        // 小役/リプレイ（全3ライン横）
+        const res = evaluateAllLines();
+        const parts = [];
+        if (res.hasReplay) { coinBalance += costPerSpin; parts.push('リプレイ'); }
+        if (res.total > 0) { coinBalance += res.total; parts.push(res.messages.join(' / ')); playSound('win'); }
+        setMessage(parts.length ? parts.join(' / ') : 'ハズレ…次こそ当てよう！');
+      }
+    }
+
+    isSpinning = false;
+    spinBtn.removeAttribute("aria-busy");
+    updateCoinDisplay();
+    setUndoDisabled(!lastState);
+  }, spinDuration);
+}
+
+// クリックハンドラを最新版に差し替え
+try {
+  const spinBtn = document.getElementById('spinButton');
+  if (spinBtn) {
+    spinBtn.removeEventListener('click', handleSpin);
+    spinBtn.removeEventListener('click', handleSpinV2);
+    spinBtn.addEventListener('click', handleSpinV3);
+  }
+} catch {}
+
+// ===================== Manual lever + stop mode =====================
+// Start a continuous scroll for a reel
+function startReel(i) {
+  const reel = document.getElementById(`reel${i}`);
+  const reelContent = document.createElement('div');
+  reelContent.classList.add('reel-content');
+  for (let k = 0; k < 10; k++) {
+    const span = document.createElement('span');
+    span.textContent = randomSymbolManual();
+    reelContent.appendChild(span);
+  }
+  reel.innerHTML = '';
+  reel.appendChild(reelContent);
+  reelContent.style.animation = 'spin 0.2s linear infinite';
+  reelSpinning[i] = true;
+  reelStopped[i] = false;
+}
+
+// Stop a reel and set final 3 symbols
+function stopReel(i) {
+  if (!isSpinning || !reelSpinning[i] || reelStopped[i]) return;
+  ensureAudio();
+  const reel = document.getElementById(`reel${i}`);
+  const finalContent = document.createElement('div');
+  finalContent.classList.add('reel-content');
+  for (let r = 0; r < 3; r++) {
+    const span = document.createElement('span');
+    let sym = randomSymbolManual();
+    // If bonus is pending, force center line based on stop order
+    if (pendingBonus && r === 1) {
+      const stoppedCount = reelStopped.filter(Boolean).length; // reels stopped before this stop
+      if (pendingBonus === 'big') {
+        sym = '7';
+      } else if (pendingBonus === 'reg') {
+        // First two stopped reels show 7, last stopped reel shows BAR
+        sym = stoppedCount < 2 ? '7' : 'BAR';
+      }
+    }
+    if (String(sym).includes('7')) { span.textContent = '7'; span.classList.add('seven'); }
+    else if (sym === 'BAR') { span.textContent = 'BAR'; span.classList.add('bar'); }
+    else { span.textContent = sym; }
+    finalContent.appendChild(span);
+  }
+  reel.innerHTML = '';
+  reel.appendChild(finalContent);
+  reelSpinning[i] = false;
+  reelStopped[i] = true;
+  // Premium triggers tied to stop timing
+  const stoppedCountNow = reelStopped.filter(Boolean).length;
+  if (pendingBonus === 'big') {
+    if (hibiscusPattern === 11 && stoppedCountNow === 1) { flashColor('blue'); playWaveFX(); }
+    if (hibiscusPattern === 12 && stoppedCountNow === 2) { flashColor('yellow'); playThunderFX(); }
+  }
+  // If all reels stopped, evaluate
+  if (reelStopped.every(Boolean)) {
+    evaluateManualOutcome();
+  }
+  updatePanelControls();
+}
+
+function getReelColumnSymbolsManual() {
+  // returns array of 3 columns; each column is [top, middle, bottom]
+  return [0,1,2].map(i => {
+    const reel = document.getElementById(`reel${i}`);
+    const spans = reel.querySelectorAll('.reel-content span');
+    const col = [0,1,2].map(row => {
+      const t = spans[row] ? (spans[row].textContent || '') : '';
+      return canonicalSymbol(t);
+    });
+    return col;
+  });
+}
+
+function evaluateFiveLinesManual() {
+  const cols = getReelColumnSymbolsManual(); // [ [t,m,b], [t,m,b], [t,m,b] ]
+  const lines = [];
+  // rows 0..2
+  for (let r=0;r<3;r++) lines.push([cols[0][r], cols[1][r], cols[2][r]]);
+  // diagonals
+  lines.push([cols[0][0], cols[1][1], cols[2][2]]);
+  lines.push([cols[0][2], cols[1][1], cols[2][0]]);
+  const results = [];
+  lines.forEach((syms)=>{
+    const r = evaluateLineWin(syms);
+    if (r && !r.replay) results.push(r); // manual modeにリプレイなし
+  });
+  return results;
+}
+
+function evaluateManualOutcome() {
+  // まずレバー時の抽選結果を優先
+  if (pendingBonus === 'big') {
+    setMessage('🌺 BIGボーナス！');
+    // 一括加算（SEなし）
+    coinBalance += 350;
+    playPayoutBurst(350);
+    isSpinning = false;
+    betCount = 0;
+    pendingBonus = null;
+    updateCoinDisplay();
+    updateBetDisplay();
+    updatePanelControls();
+    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    return;
+  }
+  if (pendingBonus === 'reg') {
+    setMessage('🌺 REGボーナス！');
+    coinBalance += 120;
+    playPayoutBurst(120);
+    isSpinning = false;
+    betCount = 0;
+    pendingBonus = null;
+    updateCoinDisplay();
+    updateBetDisplay();
+    updatePanelControls();
+    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    return;
+  }
+  // 判定は5ライン（3横 + 斜め2）
+  const cols = getReelColumnSymbolsManual();
+
+  // 小役払い出し（5ライン合算）
+  const wins = evaluateFiveLinesManual();
+  const total = wins.reduce((s,w)=> s + (w.payout||0), 0);
+  if (total > 0) {
+    const msg = wins.map(w=>`${w.symbol}x3 +${w.payout}`).join(' / ');
+    setMessage(msg);
+    // 1枚ずつ払い出し（合算払い）
+    addCoinsGradually(total, () => {
+      isSpinning = false;
+      betCount = 0;
+      pendingBonus = null;
+      updateBetDisplay();
+      updatePanelControls();
+      try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    });
+  } else {
+    setMessage('ハズレ…次こそ当てよう！');
+    isSpinning = false;
+    betCount = 0;
+    pendingBonus = null;
+    updateBetDisplay();
+    updatePanelControls();
+    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+  }
+}
+
+function addCoinsGradually(amount, onDone) {
+  let paid = 0;
+  if (amount <= 0) { if (onDone) onDone(); return; }
+  const iv = setInterval(() => {
+    ensureAudio();
+    coinBalance += 1;
+    updateCoinDisplay();
+    playSound('coin');
+    paid += 1;
+    if (paid >= amount) { clearInterval(iv); if (onDone) onDone(); }
+  }, 60);
+}
+
+function pressBet() {
+  if (isSpinning) return;
+  if (coinBalance <= 0) { setMessage('コインが足りません', true); playSound('error'); return; }
+  ensureAudio();
+  // 一度の押下で最大3枚BET（残高が足りなければ残高分）
+  betCount = Math.min(maxBet, coinBalance);
+  playSound('click');
+  updateBetDisplay();
+}
+
+function pullLever() {
+  if (isSpinning) return;
+  if (betCount === 0) { setMessage('BETしてください'); return; }
+  if (coinBalance < betCount) { setMessage('コインが足りません', true); playSound('error'); return; }
+  ensureAudio();
+  saveState();
+  isSpinning = true;
+  setMessage('回転中…');
+  clearHibiscusGlow();
+  coinBalance -= betCount;
+  updateCoinDisplay();
+  playSound('click');
+  try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.add('engaged'); } catch {}
+  // 抽選（設定に連動）
+  const table = SETTINGS[currentSetting] || SETTINGS[1];
+  const pBig = 1 / table.big;
+  const pReg = 1 / table.reg;
+  const u = Math.random();
+  pendingBonus = u < pBig ? 'big' : (u < pBig + pReg ? 'reg' : null);
+  // レバーオンで点灯・SE（当選時）
+  if (pendingBonus) {
+    glowHibiscus(pendingBonus === 'big' ? 'big' : 'reg');
+    if (!(pendingBonus === 'big' && hibiscusMute)) playKyuin();
+    // Pattern 10 immediate delayed explosion after lever-on
+    if (hibiscusPattern === 10) { setTimeout(()=>{ flashColor('red'); playExplosion(); }, 650); }
+  }
+  // start reels
+  for (let i=0;i<3;i++) startReel(i);
+  updatePanelControls();
+}
+
+function updateBetDisplay() {
+  const el = document.getElementById('betCount');
+  if (el) el.textContent = String(betCount);
+}
+
+function updatePanelControls() {
+  const betBtn = document.getElementById('betButton');
+  const leverBtn = document.getElementById('lever');
+  const stopBtns = [0,1,2].map(i => document.getElementById(`stop${i}`));
+  if (betBtn) betBtn.disabled = isSpinning || betCount >= maxBet || coinBalance <= 0;
+  if (leverBtn) leverBtn.disabled = isSpinning || betCount === 0;
+  stopBtns.forEach((b,i)=>{ if (b) b.disabled = !isSpinning || !reelSpinning[i]; });
+}
+
+// Wire up panel events
+try {
+  const betBtn = document.getElementById('betButton');
+  const leverBtn = document.getElementById('lever');
+  const stopBtns = [0,1,2].map(i => document.getElementById(`stop${i}`));
+  betBtn && betBtn.addEventListener('click', () => { pressBet(); updatePanelControls(); });
+  leverBtn && leverBtn.addEventListener('click', () => { pullLever(); updatePanelControls(); });
+  stopBtns.forEach((b,i)=> b && b.addEventListener('click', () => stopReel(i)));
+  updatePanelControls();
+  updateBetDisplay();
+} catch {}
+
+// Test hooks (non-invasive)
+try {
+  if (typeof window !== 'undefined') {
+    window._game = {
+      // state
+      get coin(){ return coinBalance; }, set coin(v){ coinBalance = v; updateCoinDisplay(); },
+      get bet(){ return betCount; }, set bet(v){ betCount = v; updateBetDisplay(); },
+      // actions
+      pressBet, pullLever, stopReel,
+      // helper to set centers and evaluate
+      forceEvaluate(centers) {
+        [0,1,2].forEach((i)=>{
+          const reel = document.getElementById(`reel${i}`);
+          const cont = document.createElement('div');
+          cont.classList.add('reel-content');
+          // top, center, bottom
+          const syms = [randomSymbolManual(), centers[i], randomSymbolManual()];
+          syms.forEach((s)=>{
+            const sp = document.createElement('span');
+            if (String(s).includes('7')) { sp.textContent='7'; sp.classList.add('seven'); }
+            else { sp.textContent = s; if (s==='BAR') sp.classList.add('bar'); }
+            cont.appendChild(sp);
+          });
+          reel.innerHTML='';
+          reel.appendChild(cont);
+          reelSpinning[i] = false; reelStopped[i] = true;
+        });
+        isSpinning = true; // mimic in-spin finishing
+        evaluateManualOutcome();
+      }
+    };
+  }
+} catch {}
