@@ -22,6 +22,12 @@ let pendingBonus = null; // 'big' | 'reg' | null
 let hibiscusPattern = null; // current premium pattern id
 let hibiscusMute = false; // pattern2: mute at lever-on
 let nextGameForceNormal = false; // pattern9 behavior
+function setLeverEngaged(on) {
+  try {
+    const leverBtn = document.getElementById('lever');
+    if (leverBtn) leverBtn.classList.toggle('engaged', !!on);
+  } catch {}
+}
 // 設定（1〜6）の確率テーブルと配当
 const SETTINGS = {
   1: { big: 292, reg: 489 },
@@ -273,18 +279,6 @@ function spinReels(isBonus = false) {
   });
 }
 
-function normalizeSevens(root) {
-  try {
-    root.querySelectorAll('span').forEach((el) => {
-      const t = el.textContent || '';
-      if (t.includes('7')) {
-        el.textContent = '7';
-        el.classList.add('seven');
-      }
-    });
-} catch {}
-}
-
 // 絵文字のバリアント差などを吸収して判定用に正規化
 function canonicalSymbol(t) {
   if (!t) return '';
@@ -309,22 +303,6 @@ function getAllLineSymbols() {
   }));
 }
 
-function evaluateLineWin(symbols) {
-  if (!symbols || symbols.length !== 3) return null;
-  const [a, b, c] = symbols;
-  if (a === b && b === c) {
-    switch (a) {
-      case '🔔': return { type: 'bell', symbol: '🔔', payout: 15 };
-      case '🍇': return { type: 'grape', symbol: '🍇', payout: 12 };
-      case '🍋': return { type: 'lemon', symbol: '🍋', payout: 6 };
-      case '🍒': return { type: 'cherry', symbol: '🍒', payout: 4 };
-      case '⭐': return { type: 'replay', symbol: '⭐', payout: 0, replay: true };
-      default: return null;
-    }
-  }
-  return null;
-}
-
 function evaluateAllLines() {
   const lines = getAllLineSymbols();
   const results = lines.map(evaluateLineWin).filter(Boolean);
@@ -341,7 +319,7 @@ function glowHibiscus(typeOrPattern = 'normal') {
   const left = document.getElementById("hibiscus");
   const right = document.getElementById("hibiscus-right");
   const all = [left, right].filter(Boolean);
-  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
+  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','glow-leaf','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
   all.forEach(el => el.classList.remove(...clsAll));
 
   // decide pattern
@@ -350,9 +328,16 @@ function glowHibiscus(typeOrPattern = 'normal') {
   if (typeOrPattern === 'big') {
     if (nextGameForceNormal) { pattern = 'glow-normal'; nextGameForceNormal = false; }
     else {
-      // Choose from 13 patterns (including rotate premium)
-      const idx = Math.floor(Math.random()*13) + 1; // 1..13
-      hibiscusPattern = idx;
+      // 75%: 通常点滅, 25%: プレミア（葉っぱ点滅は超レア）
+      const premiumIds = [2,3,4,5,6,7,8,9,10,11,12,13];
+      let idx;
+      if (Math.random() < 0.75) {
+        idx = 1; // normal
+      } else {
+        // 10% of premium chunk -> ultra premium leaf-only (~2.5% overall)
+        idx = (Math.random() < 0.10) ? 14 : premiumIds[Math.floor(Math.random()*premiumIds.length)];
+      }
+      hibiscusPattern = idx; // 保存して停止タイミング演出に使用
       switch (idx) {
         case 1: pattern = 'glow-normal'; break; // 通常
         case 2: pattern = 'glow-normal'; hibiscusMute = true; break; // 無音＋通常
@@ -370,6 +355,7 @@ function glowHibiscus(typeOrPattern = 'normal') {
         case 11: pattern = 'glow-normal'; break; // 第一停止で青ﾌﾗｯｼｭ（stopで処理）
         case 12: pattern = 'glow-normal'; break; // 第二停止で黄ﾌﾗｯｼｭ（stopで処理）
         case 13: pattern = 'glow-rotate'; break; // 回転プレミア
+        case 14: pattern = 'glow-leaf'; break; // 超プレミア：葉っぱのみ点滅
         default: pattern = 'glow-normal';
       }
     }
@@ -400,7 +386,7 @@ function clearHibiscusGlow() {
   const left = document.getElementById("hibiscus");
   const right = document.getElementById("hibiscus-right");
   const all = [left, right].filter(Boolean);
-  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
+  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','glow-leaf','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
   all.forEach(el => el.classList.remove(...clsAll));
   hibiscusPattern = null; hibiscusMute = false;
 }
@@ -942,7 +928,7 @@ function evaluateManualOutcome() {
       pendingBonus = null;
       updateBetDisplay();
       updatePanelControls();
-      try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+      setLeverEngaged(false);
     });
   } else {
     setMessage('ハズレ…次こそ当てよう！');
@@ -951,7 +937,7 @@ function evaluateManualOutcome() {
     pendingBonus = null;
     updateBetDisplay();
     updatePanelControls();
-    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    setLeverEngaged(false);
   }
 }
 
@@ -990,7 +976,7 @@ function pullLever() {
   coinBalance -= betCount;
   updateCoinDisplay();
   playSound('click');
-  try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.add('engaged'); } catch {}
+  setLeverEngaged(true);
   // 抽選（設定に連動）
   const table = SETTINGS[currentSetting] || SETTINGS[1];
   const pBig = 1 / table.big;
