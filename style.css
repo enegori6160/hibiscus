@@ -139,7 +139,8 @@ body.dark {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: clamp(10px, 2vw, 16px) clamp(14px, 3vw, 20px);
+  --marqueeH: clamp(52px, 8vw, 72px);
+  padding: calc(var(--marqueeH) + 10px) clamp(14px, 3vw, 20px) clamp(10px, 2vw, 16px);
   border-radius: 16px;
   background:
     radial-gradient(120% 120% at 50% 30%, rgba(255,90,0,.18), rgba(255,0,0,0) 60%),
@@ -147,7 +148,7 @@ body.dark {
   border: 3px solid #2b3445;
   box-shadow: inset 0 2px 8px rgba(0,0,0,.5), 0 10px 24px rgba(0,0,0,.35);
 }
-.slot-machine { display: inline-flex; justify-content: center; align-items: center; gap: clamp(8px, 2vw, 16px); }
+.slot-machine { display: inline-flex; justify-content: center; align-items: center; gap: clamp(8px, 2vw, 16px); position: relative; z-index: 5; }
 .reel {
   width: clamp(72px, 12vw, 120px);
   height: clamp(108px, 18vw, 180px);
@@ -171,9 +172,14 @@ body.dark {
 }
 .reel span.bar { background: #111827; color: #fff; border-radius: 6px; padding: 2px 8px; letter-spacing: .08em; }
 .seven {
-  color: #ef4444; /* vivid red */
-  text-shadow: 0 1px 0 rgba(0,0,0,.25), 0 0 8px rgba(239,68,68,.35);
-  font-weight: 800;
+  font-family: "Impact", "Arial Black", var(--font-family);
+  font-weight: 900;
+  font-size: clamp(28px, 5vw, 42px);
+  background: linear-gradient(180deg, #ff3b3b 0%, #d31212 60%, #9b0b0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 2px #ffffff;
+  text-shadow: 0 1px 0 rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.25), 0 0 12px rgba(239,68,68,.35);
 }
 
 .message { font-weight: 700; margin-top: 8px; min-height: 1.6em; opacity: 0; transform: translateY(6px); transition: opacity .25s ease, transform .25s ease; }
@@ -203,9 +209,9 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   pointer-events: none;
   isolation: isolate; /* layer for ::before/::after z-index */
 }
-.reel-frame .hibiscus-side { position: absolute; top: -10px; }
-.reel-frame #hibiscus { left: -10px; }
-.reel-frame #hibiscus-right { right: -10px; }
+.reel-frame .hibiscus-side { position: absolute; top: 6px; z-index: 2; }
+.reel-frame #hibiscus { left: 10px; }
+.reel-frame #hibiscus-right { right: 10px; }
 .hibiscus-side::after {
   /* Leaves behind the flower */
   content: "";
@@ -392,10 +398,10 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 
 /* Responsive layout for very small screens */
 @media (max-width: 600px) {
-  .reel-frame { padding: 10px 14px; border-radius: 14px; }
-  .reel-frame .hibiscus-side { width: 54px; height: 54px; top: -6px; }
-  .reel-frame #hibiscus { left: -6px; }
-  .reel-frame #hibiscus-right { right: -6px; }
+  .reel-frame { --marqueeH: 48px; padding: calc(var(--marqueeH) + 8px) 12px 10px; border-radius: 14px; }
+  .reel-frame .hibiscus-side { width: 54px; height: 54px; top: 6px; }
+  .reel-frame #hibiscus { left: 6px; }
+  .reel-frame #hibiscus-right { right: 6px; }
 
   /* Controls: lever fixed on the right for thumb reachability */
   .cabinet-panel { grid-template-columns: 1fr auto; gap: 10px; }
