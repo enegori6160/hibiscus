@@ -51,7 +51,7 @@ const SETTINGS = {
   3: { big: 268, reg: 420, freeze: 8192 },
   4: { big: 257, reg: 390, freeze: 8192 },
   5: { big: 244, reg: 360, freeze: 8192 },
-  6: { big: 20000,   reg: 30000,  freeze: 40000 }, // デモ用高設定
+  6: { big: 2,   reg: 5,  freeze: 10 }, // デモ用高設定
 };
 const PAYOUT = { big: 350, reg: 120, freeze: 2000 };
 let currentSetting = 1;
