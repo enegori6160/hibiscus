@@ -503,7 +503,13 @@ function updateCoinDisplay() {
   const resetBtn = document.getElementById("resetButton");
   resetBtn.disabled = isSpinning;
   resetBtn.setAttribute("aria-disabled", resetBtn.disabled);
-  document.getElementById("coinDisplay").innerText = `所持コイン：${coinBalance}枚`;
+  const bottom = document.getElementById("coinDisplay");
+  if (bottom) bottom.innerText = `所持コイン：${coinBalance}枚`;
+  const top = document.getElementById("coinDisplayTop");
+  if (top) {
+    top.textContent = String(coinBalance);
+    try { top.classList.remove('ping'); void top.offsetWidth; top.classList.add('ping'); } catch {}
+  }
   storage.save("coinBalance", coinBalance);
 }
 
