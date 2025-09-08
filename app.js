@@ -1,4 +1,19 @@
 // Symbols and config
+// Mobile UX tweaks: prevent elastic scroll bounce and add viewport height fix
+try {
+  // Avoid iOS rubber-band scrolling causing accidental refresh while playing
+  document.addEventListener('touchmove', (e) => {
+    const el = e.target.closest('.reel, .cabinet-panel, button');
+    if (el) e.preventDefault();
+  }, { passive: false });
+  // Set CSS var --vh to actual viewport height to handle mobile URL bar
+  const setVH = () => {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  };
+  setVH();
+  window.addEventListener('resize', setVH);
+} catch {}
 const symbols = ["🍒", "⭐", "🍉", "🔔", "7️⃣"]; // legacy (UI用): ぶどう→🍉
 // Manual mode symbols (BAR入り) ぶどう→🍉、リプレイ⭐を追加
 const symbolsManual = ['7', 'BAR', '🔔', '🍉', '🍒', '⭐'];

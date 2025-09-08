@@ -29,6 +29,10 @@
 html, body { height: 100%; }
 html { scroll-behavior: smooth; }
 
+/* Use dynamic viewport unit for mobile URL bar collapse */
+:root { --vh: 1vh; }
+.app-main { min-height: calc(var(--vh) * 100 - 120px); }
+
 body {
   font-family: var(--font-family);
   background-color: var(--color-bg);
@@ -386,6 +390,15 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 @media (max-width: 600px) {
   .slot-container { grid-template-columns: 1fr; }
   .hibiscus-side { display: none; }
+  .cabinet-panel { grid-template-columns: 1fr; gap: 10px; }
+  .cabinet-panel .panel-center { order: 1; }
+  .cabinet-panel .panel-left { order: 2; }
+  .cabinet-panel .panel-right { order: 3; }
+  .cabinet-panel .stop { width: 56px; height: 56px; }
+  .cabinet-panel .lever.joystick { width: 84px; height: 84px; }
+  .slot-machine { gap: 6px; }
+  .reel { width: 86px; height: 156px; }
+  .reel span { font-size: 2.2rem; }
 }
 
 /* Reduced motion: limit to decorative effects (keep reels functional) */
