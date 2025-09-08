@@ -1164,17 +1164,23 @@ function evaluateManualOutcome() {
 function addCoinsGradually(amount, onDone) {
   let paid = 0;
   if (amount <= 0) { if (onDone) onDone(); return; }
-  // Pace: larger amounts count faster but still 1枚刻み
-  const step = amount > 1200 ? 6 : amount > 600 ? 8 : amount > 300 ? 12 : amount > 120 ? 16 : amount > 50 ? 24 : 40; // ms/coin
-  const soundEvery = amount > 1200 ? 5 : amount > 300 ? 3 : 1;
+  // For very large awards (e.g., 2000枚 SUPER BIG), count by hundreds
+  const useHundreds = amount >= 2000;
+  const unit = useHundreds ? 100 : 1; // coins per tick
+  const intervalMs = useHundreds
+    ? 45 // ~0.9s for 2000枚 (20 ticks)
+    : (amount > 1200 ? 6 : amount > 600 ? 8 : amount > 300 ? 12 : amount > 120 ? 16 : amount > 50 ? 24 : 40);
+  const soundEvery = useHundreds ? 1 : (amount > 1200 ? 5 : amount > 300 ? 3 : 1);
   const iv = setInterval(() => {
     ensureAudio();
-    coinBalance += 1;
+    const inc = Math.min(unit, amount - paid);
+    coinBalance += inc;
     updateCoinDisplay();
-    if ((paid % soundEvery) === 0) playSound('coin');
-    paid += 1;
+    // Sound: every tick for hundreds mode, or at interval for per-coin mode
+    if (useHundreds || (paid % soundEvery) === 0) playSound('coin');
+    paid += inc;
     if (paid >= amount) { clearInterval(iv); if (onDone) onDone(); }
-  }, step);
+  }, intervalMs);
 }
 
 function pressBet() {
