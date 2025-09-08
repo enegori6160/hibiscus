@@ -46,11 +46,11 @@ function setLeverEngaged(on) {
 }
 // 設定（1〜6）の確率テーブルと配当
 const SETTINGS = {
-  1: { big: 292, reg: 489, freeze: 8192 },
-  2: { big: 280, reg: 452, freeze: 8192 },
-  3: { big: 268, reg: 420, freeze: 8192 },
-  4: { big: 257, reg: 390, freeze: 8192 },
-  5: { big: 244, reg: 360, freeze: 8192 },
+  1: { big: 100, reg: 150, freeze: 300 },
+  2: { big: 97, reg: 145, freeze: 300 },
+  3: { big: 95, reg: 143, freeze: 300 },
+  4: { big: 93, reg: 140, freeze: 300 },
+  5: { big: 89, reg: 138, freeze: 300 },
   6: { big: 2,   reg: 5,  freeze: 10 }, // デモ用高設定
 };
 const PAYOUT = { big: 350, reg: 120, freeze: 2000 };
