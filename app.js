@@ -1,7 +1,7 @@
 // Symbols and config
-const symbols = ["🍒", "🍋", "⭐", "🍇", "🔔", "7️⃣"]; // legacy
-// Manual mode symbols (BAR入り)
-const symbolsManual = ['7', 'BAR', '🔔', '🍇', '🍒', '🍋'];
+const symbols = ["🍒", "⭐", "🍉", "🔔", "7️⃣"]; // legacy (UI用): ぶどう→🍉
+// Manual mode symbols (BAR入り) ぶどう→🍉、リプレイ⭐を追加
+const symbolsManual = ['7', 'BAR', '🔔', '🍉', '🍒', '⭐'];
 const spinDuration = 600;
 const costPerSpin = 3;
 const enableUndo = false; // Undo feature disabled; button hidden
@@ -212,8 +212,8 @@ function toggleNav() {
   btn.setAttribute("aria-expanded", String(open));
 }
 
-// Weighted symbol distribution to target ~1/8 small-win rate across 3 lines (legacy)
-const SYMBOL_WEIGHTS = { '🍒': 2, '🍋': 2, '⭐': 4, '🍇': 2, '🔔': 2, '7': 1 };
+// Legacy auto-spin weights（UI用）
+const SYMBOL_WEIGHTS = { '🍒': 2, '⭐': 4, '🍉': 2, '🔔': 2, '7': 1 };
 const SYMBOL_LIST = Object.keys(SYMBOL_WEIGHTS);
 const SYMBOL_TOTAL = SYMBOL_LIST.reduce((s, k) => s + SYMBOL_WEIGHTS[k], 0);
 function randomSymbol() {
@@ -226,16 +226,39 @@ function randomSymbol() {
   return SYMBOL_LIST[SYMBOL_LIST.length - 1];
 }
 
-// Manual mode random symbol (BAR含む)
-const MANUAL_WEIGHTS = { '7': 1, 'BAR': 1, '🔔': 2, '🍇': 2, '🍒': 3, '🍋': 2 };
-const MANUAL_LIST = Object.keys(MANUAL_WEIGHTS);
-const MANUAL_TOTAL = MANUAL_LIST.reduce((s,k)=>s+MANUAL_WEIGHTS[k],0);
+// Manual mode random symbol with probabilities tuned to target per‑spin rates
+// Targets (per spin, 5ライン合算):
+// 🔔 1/7.97, 🍒 1/61.8, 🍉 1/170.1, ⭐ 1/7.3
+// Per-cell probability p solves: Pspin = 1 - (1 - p^3)^5 ⇒ p = ((1-(1-P)^(1/5)))^(1/3)
+function perCellFromSpinProb(P) {
+  const fifth = Math.pow(1 - P, 1/5);
+  const inner = 1 - fifth;
+  return Math.pow(Math.max(inner, 0), 1/3);
+}
+const Pspin = {
+  '🔔': 1/7.97,
+  '🍒': 1/61.8,
+  '🍉': 1/170.1,
+  '⭐': 1/7.3,
+};
+const Pcell = {
+  '🔔': perCellFromSpinProb(Pspin['🔔']),
+  '🍒': perCellFromSpinProb(Pspin['🍒']),
+  '🍉': perCellFromSpinProb(Pspin['🍉']),
+  '⭐': perCellFromSpinProb(Pspin['⭐']),
+};
+// Distribute remaining mass to 7/BAR（7は控えめ）
+let mass = 1 - (Pcell['🔔'] + Pcell['🍒'] + Pcell['🍉'] + Pcell['⭐']);
+mass = Math.max(0, Math.min(1, mass));
+const Pcell7 = Math.min(0.02, mass * 0.2);
+const PcellBAR = Math.max(0, mass - Pcell7);
+const MANUAL_PROBS = { '7': Pcell7, 'BAR': PcellBAR, '🔔': Pcell['🔔'], '🍉': Pcell['🍉'], '🍒': Pcell['🍒'], '⭐': Pcell['⭐'] };
+const MANUAL_ORDER = Object.keys(MANUAL_PROBS);
+const MANUAL_ACC = (() => { let a=0; return MANUAL_ORDER.map(k => (a += MANUAL_PROBS[k])); })();
 function randomSymbolManual() {
-  // Weighted distribution to keep小役やや出やすく
-  const r = Math.random() * MANUAL_TOTAL;
-  let acc = 0;
-  for (const k of MANUAL_LIST) { acc += MANUAL_WEIGHTS[k]; if (r < acc) return k; }
-  return MANUAL_LIST[MANUAL_LIST.length-1];
+  const r = Math.random();
+  for (let i=0;i<MANUAL_ORDER.length;i++) { if (r < MANUAL_ACC[i]) return MANUAL_ORDER[i]; }
+  return MANUAL_ORDER[MANUAL_ORDER.length-1];
 }
 
 // Reel logic
@@ -307,7 +330,7 @@ function canonicalSymbol(t) {
   if (t.includes('BAR')) return 'BAR';
   if (t.includes('⭐')) return '⭐'; // ⭐と⭐️を統一
   if (t.includes('🔔')) return '🔔';
-  if (t.includes('🍇')) return '🍇';
+  if (t.includes('🍉')) return '🍉';
   if (t.includes('🍋')) return '🍋';
   if (t.includes('🍒')) return '🍒';
   return t.trim();
@@ -747,9 +770,8 @@ function evaluateLineWin(symbols) {
   const [a, b, c] = symbols;
   if (a === b && b === c) {
     switch (a) {
-      case '🔔': return { type: 'bell', symbol: '🔔', payout: 15 };
-      case '🍇': return { type: 'grape', symbol: '🍇', payout: 12 };
-      case '🍋': return { type: 'lemon', symbol: '🍋', payout: 6 };
+      case '🔔': return { type: 'bell', symbol: '🔔', payout: 9 };
+      case '🍉': return { type: 'watermelon', symbol: '🍉', payout: 12 };
       case '🍒': return { type: 'cherry', symbol: '🍒', payout: 4 };
       case '⭐': return { type: 'replay', symbol: '⭐', payout: 0, replay: true };
       default: return null;
@@ -988,12 +1010,7 @@ function evaluateFiveLinesManual() {
   // diagonals
   lines.push([cols[0][0], cols[1][1], cols[2][2]]);
   lines.push([cols[0][2], cols[1][1], cols[2][0]]);
-  const results = [];
-  lines.forEach((syms)=>{
-    const r = evaluateLineWin(syms);
-    if (r && !r.replay) results.push(r); // manual modeにリプレイなし
-  });
-  return results;
+  return lines.map(evaluateLineWin).filter(Boolean);
 }
 
 function evaluateManualOutcome() {
@@ -1041,11 +1058,12 @@ function evaluateManualOutcome() {
   // 判定は5ライン（3横 + 斜め2）
   const cols = getReelColumnSymbolsManual();
 
-  // 小役払い出し（5ライン合算）
+  // 小役/リプレイ（5ライン合算）
   const wins = evaluateFiveLinesManual();
-  const total = wins.reduce((s,w)=> s + (w.payout||0), 0);
+  const replayCount = wins.filter(w=>w.replay).length;
+  const total = wins.filter(w=>!w.replay).reduce((s,w)=> s + (w.payout||0), 0);
   if (total > 0) {
-    const msg = wins.map(w=>`${w.symbol}x3 +${w.payout}`).join(' / ');
+    const msg = wins.filter(w=>!w.replay).map(w=>`${w.symbol}x3 +${w.payout}`).join(' / ');
     setMessage(msg);
     // 1枚ずつ払い出し（合算払い）
     addCoinsGradually(total, () => {
@@ -1057,6 +1075,16 @@ function evaluateManualOutcome() {
       updatePanelControls();
       setLeverEngaged(false);
     });
+  } else if (replayCount > 0) {
+    setMessage('リプレイ');
+    coinBalance += betCount; // BETぶん戻す
+    isSpinning = false;
+    betCount = 0;
+    pendingBonus = null;
+    updateCoinDisplay();
+    updateBetDisplay();
+    updatePanelControls();
+    setLeverEngaged(false);
   } else {
     setMessage('ハズレ…次こそ当てよう！');
     isSpinning = false;
