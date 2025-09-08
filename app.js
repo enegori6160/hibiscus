@@ -164,16 +164,16 @@ function playFreezeFX() {
 
 // Simulate payout sound burst without per-coin crediting
 function playPayoutBurst(amount) {
+  // kept for compatibility; per-coin払い出し時はサウンドを抑制
   if (!soundEnabled) return;
   try {
-    // number of coin ticks proportional to amount but capped
-    const ticks = Math.min(40, Math.max(8, Math.floor(amount / 10)));
+    const ticks = Math.min(24, Math.max(6, Math.floor(amount / 30)));
     let i = 0;
     const iv = setInterval(() => {
       playSound('coin');
       i += 1;
       if (i >= ticks) clearInterval(iv);
-    }, 30);
+    }, 40);
   } catch {}
 }
 
@@ -548,8 +548,14 @@ function handleSpin() {
         setMessage("🌺 ハイビスカス点灯！ボーナス当選！ 🌺");
         glowHibiscus();
         playKyuin();
-        coinBalance += 350;
         spinReels(true);
+        addCoinsGradually(350, () => {
+          isSpinning = false;
+          spinBtn.removeAttribute("aria-busy");
+          updateCoinDisplay();
+          setUndoDisabled(!lastState);
+        });
+        return;
       } else {
         setMessage("ハズレ…次こそ当てよう！");
       }
@@ -631,14 +637,26 @@ function handleSpinV2() {
         setMessage("🌺 BIGボーナス！350枚GET！");
         glowHibiscus();
         playKyuin();
-        coinBalance += PAYOUT.big;
         spinReels(true);
+        addCoinsGradually(PAYOUT.big, () => {
+          isSpinning = false;
+          spinBtn.removeAttribute("aria-busy");
+          updateCoinDisplay();
+          setUndoDisabled(!lastState);
+        });
+        return;
       } else if (u < pBig + pReg) {
         setMessage("🌺 REGボーナス！100枚GET！");
         glowHibiscus();
         playKyuin();
-        coinBalance += PAYOUT.reg;
         spinReels(true);
+        addCoinsGradually(PAYOUT.reg, () => {
+          isSpinning = false;
+          spinBtn.removeAttribute("aria-busy");
+          updateCoinDisplay();
+          setUndoDisabled(!lastState);
+        });
+        return;
       } else {
         setMessage("ハズレ…次こそ当てよう！");
       }
@@ -841,35 +859,59 @@ function handleSpinV3() {
         setMessage("❄️❄️ ❄️ ❄️ フリーズ！SUPER BIG　2000枚GET！❄️ ❄️ ❄️ ❄️" );
         glowFreeze();
         playFreezeFX();
-        coinBalance += PAYOUT.freeze;
-        playPayoutBurst(PAYOUT.freeze);
         spinReels(true);
-        awarded = true;
+        addCoinsGradually(PAYOUT.freeze, () => {
+          isSpinning = false;
+          spinBtn.removeAttribute("aria-busy");
+          updateCoinDisplay();
+          setUndoDisabled(!lastState);
+        });
+        awarded = true; return;
       } else if (u < pFreeze + pBig) {
         setMessage("🌺 BIGボーナス！350枚GET！");
         glowHibiscus('big');
         playKyuin();
-        coinBalance += PAYOUT.big;
-        playPayoutBurst(PAYOUT.big);
         spinReels(true);
-        awarded = true;
+        addCoinsGradually(PAYOUT.big, () => {
+          isSpinning = false;
+          spinBtn.removeAttribute("aria-busy");
+          updateCoinDisplay();
+          setUndoDisabled(!lastState);
+        });
+        awarded = true; return;
       } else if (u < pFreeze + pBig + pReg) {
         setMessage("🌺 REGボーナス！100枚GET！");
         glowHibiscus('reg');
         playKyuin();
-        coinBalance += PAYOUT.reg;
-        playPayoutBurst(PAYOUT.reg);
         spinReels(true);
-        awarded = true;
+        addCoinsGradually(PAYOUT.reg, () => {
+          isSpinning = false;
+          spinBtn.removeAttribute("aria-busy");
+          updateCoinDisplay();
+          setUndoDisabled(!lastState);
+        });
+        awarded = true; return;
       }
 
       if (!awarded) {
         // 小役/リプレイ（全3ライン横）
         const res = evaluateAllLines();
         const parts = [];
-        if (res.hasReplay) { coinBalance += costPerSpin; parts.push('リプレイ'); }
-        if (res.total > 0) { coinBalance += res.total; parts.push(res.messages.join(' / ')); playSound('win'); }
-        setMessage(parts.length ? parts.join(' / ') : 'ハズレ…次こそ...！');
+        const refund = res.hasReplay ? costPerSpin : 0;
+        if (refund || res.total > 0) {
+          if (res.hasReplay) parts.push('リプレイ');
+          if (res.total > 0) parts.push(res.messages.join(' / '));
+          setMessage(parts.join(' / '));
+          addCoinsGradually(refund + res.total, () => {
+            isSpinning = false;
+            spinBtn.removeAttribute("aria-busy");
+            updateCoinDisplay();
+            setUndoDisabled(!lastState);
+          });
+          return;
+        } else {
+          setMessage('ハズレ…次こそ...！');
+        }
       }
     }
 
@@ -1004,9 +1046,10 @@ function runFreezeSequence() {
     });
     try { const ov = document.createElement('div'); ov.className='flash-overlay'; document.body.appendChild(ov); setTimeout(()=>ov.remove(), 260); } catch {}
     setMessage('✨ プレミアム発動 → SUPER BIG！');
-    coinBalance += PAYOUT.freeze; playPayoutBurst(PAYOUT.freeze);
-    isSpinning = false; pendingBonus = null; freezeActive = false; betCount = 0;
-    updateCoinDisplay(); updateBetDisplay(); updatePanelControls(); setLeverEngaged(false);
+    addCoinsGradually(PAYOUT.freeze, () => {
+      isSpinning = false; pendingBonus = null; freezeActive = false; betCount = 0;
+      updateCoinDisplay(); updateBetDisplay(); updatePanelControls(); setLeverEngaged(false);
+    });
   }, 1800 + 1400);
 }
 
@@ -1038,42 +1081,41 @@ function evaluateManualOutcome() {
   // まずレバー時の抽選結果を優先
   if (pendingBonus === 'big') {
     setMessage('🌺 BIGボーナス！350枚GET！');
-    // 一括加算（SEなし）
-    coinBalance += 350;
-    playPayoutBurst(350);
-    isSpinning = false;
-    betCount = 0;
-    pendingBonus = null;
-    updateCoinDisplay();
-    updateBetDisplay();
-    updatePanelControls();
-    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    addCoinsGradually(PAYOUT.big, () => {
+      isSpinning = false;
+      betCount = 0;
+      pendingBonus = null;
+      updateCoinDisplay();
+      updateBetDisplay();
+      updatePanelControls();
+      try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    });
     return;
   }
   if (pendingBonus === 'freeze') {
     setMessage('❄️ フリーズ！SUPER BIG +2000枚');
-    coinBalance += PAYOUT.freeze;
-    playPayoutBurst(PAYOUT.freeze);
-    isSpinning = false;
-    betCount = 0;
-    pendingBonus = null;
-    updateCoinDisplay();
-    updateBetDisplay();
-    updatePanelControls();
-    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    addCoinsGradually(PAYOUT.freeze, () => {
+      isSpinning = false;
+      betCount = 0;
+      pendingBonus = null;
+      updateCoinDisplay();
+      updateBetDisplay();
+      updatePanelControls();
+      try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    });
     return;
   }
   if (pendingBonus === 'reg') {
     setMessage('🌺 REGボーナス！100枚GET！');
-    coinBalance += 120;
-    playPayoutBurst(120);
-    isSpinning = false;
-    betCount = 0;
-    pendingBonus = null;
-    updateCoinDisplay();
-    updateBetDisplay();
-    updatePanelControls();
-    try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    addCoinsGradually(PAYOUT.reg, () => {
+      isSpinning = false;
+      betCount = 0;
+      pendingBonus = null;
+      updateCoinDisplay();
+      updateBetDisplay();
+      updatePanelControls();
+      try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+    });
     return;
   }
   // 判定は5ライン（3横 + 斜め2）
@@ -1098,14 +1140,15 @@ function evaluateManualOutcome() {
     });
   } else if (replayCount > 0) {
     setMessage('リプレイ');
-    coinBalance += betCount; // BETぶん戻す
-    isSpinning = false;
-    betCount = 0;
-    pendingBonus = null;
-    updateCoinDisplay();
-    updateBetDisplay();
-    updatePanelControls();
-    setLeverEngaged(false);
+    addCoinsGradually(betCount, () => {
+      isSpinning = false;
+      betCount = 0;
+      pendingBonus = null;
+      updateCoinDisplay();
+      updateBetDisplay();
+      updatePanelControls();
+      setLeverEngaged(false);
+    });
   } else {
     setMessage('ハズレ…次こそ当てよう！');
     isSpinning = false;
@@ -1121,14 +1164,17 @@ function evaluateManualOutcome() {
 function addCoinsGradually(amount, onDone) {
   let paid = 0;
   if (amount <= 0) { if (onDone) onDone(); return; }
+  // Pace: larger amounts count faster but still 1枚刻み
+  const step = amount > 1200 ? 6 : amount > 600 ? 8 : amount > 300 ? 12 : amount > 120 ? 16 : amount > 50 ? 24 : 40; // ms/coin
+  const soundEvery = amount > 1200 ? 5 : amount > 300 ? 3 : 1;
   const iv = setInterval(() => {
     ensureAudio();
     coinBalance += 1;
     updateCoinDisplay();
-    playSound('coin');
+    if ((paid % soundEvery) === 0) playSound('coin');
     paid += 1;
     if (paid >= amount) { clearInterval(iv); if (onDone) onDone(); }
-  }, 60);
+  }, step);
 }
 
 function pressBet() {
