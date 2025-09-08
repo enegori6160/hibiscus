@@ -36,7 +36,7 @@ const SETTINGS = {
   3: { big: 268, reg: 420, freeze: 8192 },
   4: { big: 257, reg: 390, freeze: 8192 },
   5: { big: 244, reg: 360, freeze: 8192 },
-  6: { big: 2,   reg: 30,  freeze: 3 }, // デモ用高設定
+  6: { big: 20000,   reg: 30000,  freeze: 40000 }, // デモ用高設定
 };
 const PAYOUT = { big: 350, reg: 120, freeze: 2000 };
 let currentSetting = 1;
@@ -584,13 +584,13 @@ function handleSpinV2() {
       const pReg = 1 / table.reg;
       const u = Math.random();
       if (u < pBig) {
-        setMessage("🌺 BIGボーナス！");
+        setMessage("🌺 BIGボーナス！350枚GET！");
         glowHibiscus();
         playKyuin();
         coinBalance += PAYOUT.big;
         spinReels(true);
       } else if (u < pBig + pReg) {
-        setMessage("🌺 REGボーナス！");
+        setMessage("🌺 REGボーナス！100枚GET！");
         glowHibiscus();
         playKyuin();
         coinBalance += PAYOUT.reg;
@@ -795,7 +795,7 @@ function handleSpinV3() {
       const u = Math.random();
       let awarded = false;
       if (u < pFreeze) {
-        setMessage("❄️ フリーズ！SUPER BIG");
+        setMessage("❄️❄️ ❄️ ❄️ フリーズ！SUPER BIG　2000枚GET！❄️ ❄️ ❄️ ❄️" );
         glowFreeze();
         playFreezeFX();
         coinBalance += PAYOUT.freeze;
@@ -803,7 +803,7 @@ function handleSpinV3() {
         spinReels(true);
         awarded = true;
       } else if (u < pFreeze + pBig) {
-        setMessage("🌺 BIGボーナス！");
+        setMessage("🌺 BIGボーナス！350枚GET！");
         glowHibiscus('big');
         playKyuin();
         coinBalance += PAYOUT.big;
@@ -811,7 +811,7 @@ function handleSpinV3() {
         spinReels(true);
         awarded = true;
       } else if (u < pFreeze + pBig + pReg) {
-        setMessage("🌺 REGボーナス！");
+        setMessage("🌺 REGボーナス！100枚GET！");
         glowHibiscus('reg');
         playKyuin();
         coinBalance += PAYOUT.reg;
@@ -826,7 +826,7 @@ function handleSpinV3() {
         const parts = [];
         if (res.hasReplay) { coinBalance += costPerSpin; parts.push('リプレイ'); }
         if (res.total > 0) { coinBalance += res.total; parts.push(res.messages.join(' / ')); playSound('win'); }
-        setMessage(parts.length ? parts.join(' / ') : 'ハズレ…次こそ当てよう！');
+        setMessage(parts.length ? parts.join(' / ') : 'ハズレ…次こそ...！');
       }
     }
 
@@ -999,7 +999,7 @@ function evaluateFiveLinesManual() {
 function evaluateManualOutcome() {
   // まずレバー時の抽選結果を優先
   if (pendingBonus === 'big') {
-    setMessage('🌺 BIGボーナス！');
+    setMessage('🌺 BIGボーナス！350枚GET！');
     // 一括加算（SEなし）
     coinBalance += 350;
     playPayoutBurst(350);
@@ -1026,7 +1026,7 @@ function evaluateManualOutcome() {
     return;
   }
   if (pendingBonus === 'reg') {
-    setMessage('🌺 REGボーナス！');
+    setMessage('🌺 REGボーナス！100枚GET！');
     coinBalance += 120;
     playPayoutBurst(120);
     isSpinning = false;
@@ -1052,6 +1052,7 @@ function evaluateManualOutcome() {
       isSpinning = false;
       betCount = 0;
       pendingBonus = null;
+      updateCoinDisplay();
       updateBetDisplay();
       updatePanelControls();
       setLeverEngaged(false);
@@ -1061,6 +1062,7 @@ function evaluateManualOutcome() {
     isSpinning = false;
     betCount = 0;
     pendingBonus = null;
+    updateCoinDisplay();
     updateBetDisplay();
     updatePanelControls();
     setLeverEngaged(false);
