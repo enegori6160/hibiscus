@@ -224,15 +224,6 @@ function toggleSound() {
   storage.save("soundEnabled", soundEnabled);
 }
 
-// Mobile nav
-function toggleNav() {
-  const nav = document.getElementById("siteNav");
-  const btn = document.getElementById("navToggle");
-  const open = !nav.classList.contains("open");
-  nav.classList.toggle("open", open);
-  btn.setAttribute("aria-expanded", String(open));
-}
-
 // Legacy auto-spin weights（UI用）
 const SYMBOL_WEIGHTS = { '🍒': 2, '⭐': 4, '🍉': 2, '🔔': 2, '7': 1 };
 const SYMBOL_LIST = Object.keys(SYMBOL_WEIGHTS);
@@ -612,13 +603,6 @@ document.addEventListener("click", (e) => {
   if (e.target && e.target.id === "themeToggle2") toggleTheme();
   if (e.target && e.target.id === "soundToggle2") toggleSound();
 });
-
-// Nav toggle
-try { const _nv = document.getElementById("navToggle"); if (_nv) _nv.addEventListener("click", toggleNav); } catch {}
-document.querySelectorAll('#siteNav .nav-link').forEach((a) => a.addEventListener('click', () => {
-  const nav = document.getElementById('siteNav');
-  if (nav.classList.contains('open')) toggleNav();
-}));
 
 // --- 設定選択と新しいスピンロジック（設定1〜6対応） ---
 function handleSettingChange(value) {
