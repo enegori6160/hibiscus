@@ -796,6 +796,8 @@ function handleSpacePlay() {
   // Not spinning: if no BET, bet max; otherwise pull lever
   if (betCount === 0) {
     pressBet();
+    // 1タップでBET→レバーONまで行う
+    pullLever();
   } else {
     pullLever();
   }
@@ -817,6 +819,31 @@ document.addEventListener("keydown", (e) => {
     handleSpacePlay();
   }
 });
+
+// Tap anywhere to play (mobile-friendly): BET→LEVER→左/中/右
+function enableTapAnywhere() {
+  try {
+    const area = document.querySelector('.game-panel');
+    if (!area) return;
+    let tapGate = false;
+    const handler = (e) => {
+      // Ignore taps on interactive controls to avoid double-trigger
+      if (e.target && e.target.closest('button, select, a, input, textarea')) return;
+      if (tapGate) { if (e.cancelable) e.preventDefault(); return; }
+      tapGate = true;
+      // Prevent text selection/zoom
+      if (e.cancelable) e.preventDefault();
+      handleSpacePlay();
+      // Cooldown to avoid duplicate firing from synthetic events
+      setTimeout(() => { tapGate = false; }, 260);
+    };
+    // Attach only one best-fit event to avoid duplicates
+    const ev = (window.PointerEvent) ? 'pointerdown' : (('ontouchstart' in window) ? 'touchstart' : 'click');
+    area.addEventListener(ev, handler, { passive: false });
+  } catch {}
+}
+
+enableTapAnywhere();
 
 updateCoinDisplay();
 
