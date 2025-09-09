@@ -139,7 +139,7 @@ body.dark {
   display: flex;
   justify-content: center;
   align-items: center;
-  --marqueeH: clamp(52px, 8vw, 72px);
+  --marqueeH: clamp(84px, 12vw, 116px);
   padding: calc(var(--marqueeH) + 10px) clamp(14px, 3vw, 20px) clamp(10px, 2vw, 16px);
   border-radius: 16px;
   background:
@@ -187,6 +187,28 @@ body.dark {
     0 0 26px rgba(0,140,70,.6);
   filter: saturate(1.2) brightness(1.05);
 }
+
+/* Stats meters under the credit */
+.meter-panel {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(90px, 1fr);
+  gap: 6px;
+  z-index: 4;
+}
+.meter-box { display: grid; justify-items: center; gap: 2px; padding: 4px 6px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.08); border-radius: 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,.5); }
+.meter-label { font-size: 10px; color: rgba(255,255,255,.66); letter-spacing: .12em; font-weight: 700; }
+.meter-label.red { color: #ff6b6b; }
+.meter-label.orange { color: #ffb85c; }
+.meter-label.cyan { color: #60a5fa; }
+.digit-small { font-family: "Segoe UI Mono", Consolas, Menlo, monospace; font-variant-numeric: tabular-nums; font-size: clamp(14px, 3.6vw, 18px); color: #a7f3d0; text-shadow: 0 0 6px rgba(34,197,94,.9), 0 0 12px rgba(16,185,129,.7); }
+.digit-small.red { color: #ff6666; text-shadow: 0 0 6px rgba(255,80,80,.9), 0 0 12px rgba(200,50,50,.7); }
+.digit-small.orange { color: #ffb85c; text-shadow: 0 0 6px rgba(255,184,92,.9), 0 0 12px rgba(220,120,50,.7); }
+.digit-small.cyan { color: #7dd3fc; text-shadow: 0 0 6px rgba(125,211,252,.9), 0 0 12px rgba(59,130,246,.7); }
 .digit-display.ping { animation: digit-ping .28s ease-out 1; }
 @keyframes digit-ping {
   0% { filter: saturate(1.2) brightness(1.05); text-shadow: 0 0 8px rgba(0,255,120,.9), 0 0 14px rgba(0,180,90,.8), 0 0 26px rgba(0,140,70,.65); }
@@ -449,10 +471,11 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 
 /* Responsive layout for very small screens */
   @media (max-width: 600px) {
-  .reel-frame { --marqueeH: 48px; padding: calc(var(--marqueeH) + 8px) 12px 10px; border-radius: 14px; }
+  .reel-frame { --marqueeH: 72px; padding: calc(var(--marqueeH) + 8px) 12px 10px; border-radius: 14px; }
   .reel-frame .hibiscus-side { width: 54px; height: 54px; top: 6px; }
   .reel-frame #hibiscus { left: 6px; }
   .reel-frame #hibiscus-right { right: 6px; }
+  .meter-panel { top: 38px; gap: 4px; grid-auto-columns: minmax(64px, 1fr); }
     /* Move/size the credit display for phones */
     .credit-panel { top: 6px; padding: 6px 10px; min-width: 140px; }
     .digit-display { font-size: clamp(26px, 7vw, 38px); }

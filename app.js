@@ -38,6 +38,12 @@ let hibiscusPattern = null; // current premium pattern id
 let hibiscusMute = false; // pattern2: mute at lever-on
 let nextGameForceNormal = false; // pattern9 behavior
 let freezeActive = false; // running premium freeze sequence
+// Session stats
+let spinCountCurrent = 0; // 回転数（ボーナス後）
+let spinCountTotal = 0;   // 総回転数
+let countBig = 0;         // 累計BIG
+let countReg = 0;         // 累計REG
+let countFreeze = 0;      // 累計フリーズ（特殊）
 function setLeverEngaged(on) {
   try {
     const leverBtn = document.getElementById('lever');
@@ -513,6 +519,31 @@ function updateCoinDisplay() {
   storage.save("coinBalance", coinBalance);
 }
 
+function updateStatsDisplay() {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = String(val); };
+  set('statCurrent', spinCountCurrent);
+  set('statTotal', spinCountTotal);
+  set('statBIG', countBig);
+  set('statREG', countReg);
+  set('statSP', countFreeze);
+}
+
+function persistStats() {
+  storage.save('stats', { spinCountCurrent, spinCountTotal, countBig, countReg, countFreeze });
+}
+
+function onSpinStart() {
+  spinCountCurrent += 1; spinCountTotal += 1; updateStatsDisplay(); persistStats();
+}
+
+function onBonus(kind) {
+  if (kind === 'big') countBig += 1;
+  else if (kind === 'reg') countReg += 1;
+  else if (kind === 'freeze') countFreeze += 1;
+  spinCountCurrent = 0; // reset games since last bonus
+  updateStatsDisplay(); persistStats();
+}
+
 function handleSpin() {
   if (isSpinning) return;
   if (coinBalance < costPerSpin) {
@@ -531,6 +562,7 @@ function handleSpin() {
 
   coinBalance -= costPerSpin;
   updateCoinDisplay();
+  onSpinStart();
 
   spinReels();
 
@@ -549,6 +581,7 @@ function handleSpin() {
         glowHibiscus();
         playKyuin();
         spinReels(true);
+        onBonus('big');
         addCoinsGradually(350, () => {
           isSpinning = false;
           spinBtn.removeAttribute("aria-busy");
@@ -620,6 +653,7 @@ function handleSpinV2() {
 
   coinBalance -= costPerSpin;
   updateCoinDisplay();
+  onSpinStart();
   spinReels();
 
   setTimeout(() => {
@@ -638,6 +672,7 @@ function handleSpinV2() {
         glowHibiscus();
         playKyuin();
         spinReels(true);
+        onBonus('big');
         addCoinsGradually(PAYOUT.big, () => {
           isSpinning = false;
           spinBtn.removeAttribute("aria-busy");
@@ -650,6 +685,7 @@ function handleSpinV2() {
         glowHibiscus();
         playKyuin();
         spinReels(true);
+        onBonus('reg');
         addCoinsGradually(PAYOUT.reg, () => {
           isSpinning = false;
           spinBtn.removeAttribute("aria-busy");
@@ -686,8 +722,13 @@ try {
   }
   soundEnabled = storage.load("soundEnabled", true);
   coinBalance = storage.load("coinBalance", 100);
+  try {
+    const s = storage.load('stats', null);
+    if (s) { spinCountCurrent = s.spinCountCurrent||0; spinCountTotal = s.spinCountTotal||0; countBig = s.countBig||0; countReg = s.countReg||0; countFreeze = s.countFreeze||0; }
+  } catch {}
   reflectThemeButtons();
   reflectSoundButtons();
+  updateStatsDisplay();
   // Unlock audio on first user interaction
   try {
     ['pointerdown','keydown','touchstart','click'].forEach((ev)=>{
@@ -837,6 +878,7 @@ function handleSpinV3() {
 
   coinBalance -= costPerSpin;
   updateCoinDisplay();
+  onSpinStart();
 
   // 通常回転
   spinReels();
@@ -860,6 +902,7 @@ function handleSpinV3() {
         glowFreeze();
         playFreezeFX();
         spinReels(true);
+        onBonus('freeze');
         addCoinsGradually(PAYOUT.freeze, () => {
           isSpinning = false;
           spinBtn.removeAttribute("aria-busy");
@@ -1046,6 +1089,7 @@ function runFreezeSequence() {
     });
     try { const ov = document.createElement('div'); ov.className='flash-overlay'; document.body.appendChild(ov); setTimeout(()=>ov.remove(), 260); } catch {}
     setMessage('✨ プレミアム発動 → SUPER BIG！');
+    onBonus('freeze');
     addCoinsGradually(PAYOUT.freeze, () => {
       isSpinning = false; pendingBonus = null; freezeActive = false; betCount = 0;
       updateCoinDisplay(); updateBetDisplay(); updatePanelControls(); setLeverEngaged(false);
@@ -1081,6 +1125,7 @@ function evaluateManualOutcome() {
   // まずレバー時の抽選結果を優先
   if (pendingBonus === 'big') {
     setMessage('🌺 BIGボーナス！350枚GET！');
+    onBonus('big');
     addCoinsGradually(PAYOUT.big, () => {
       isSpinning = false;
       betCount = 0;
@@ -1094,6 +1139,7 @@ function evaluateManualOutcome() {
   }
   if (pendingBonus === 'freeze') {
     setMessage('❄️ フリーズ！SUPER BIG +2000枚');
+    onBonus('freeze');
     addCoinsGradually(PAYOUT.freeze, () => {
       isSpinning = false;
       betCount = 0;
@@ -1107,6 +1153,7 @@ function evaluateManualOutcome() {
   }
   if (pendingBonus === 'reg') {
     setMessage('🌺 REGボーナス！100枚GET！');
+    onBonus('reg');
     addCoinsGradually(PAYOUT.reg, () => {
       isSpinning = false;
       betCount = 0;
@@ -1204,6 +1251,7 @@ function pullLever() {
   clearHibiscusGlow();
   coinBalance -= betCount;
   updateCoinDisplay();
+  onSpinStart();
   playSound('click');
   setLeverEngaged(true);
   // 抽選（設定に連動）
