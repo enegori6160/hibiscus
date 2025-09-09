@@ -142,6 +142,7 @@ body.dark {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: clamp(8px, 2vw, 16px);
   --marqueeH: clamp(16px, 3vw, 24px);
   padding: calc(var(--marqueeH) + 10px) clamp(14px, 3vw, 20px) clamp(10px, 2vw, 16px);
   border-radius: 16px;
@@ -286,9 +287,9 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   pointer-events: none;
   isolation: isolate; /* layer for ::before/::after z-index */
 }
-.reel-frame .hibiscus-side { position: absolute; top: 6px; z-index: 2; }
-.reel-frame #hibiscus { left: 10px; }
-.reel-frame #hibiscus-right { right: 10px; }
+.reel-frame .hibiscus-side { position: relative; z-index: 2; }
+.reel-frame #hibiscus { left: 0; }
+.reel-frame #hibiscus-right { right: 0; }
 .hibiscus-side::after {
   /* Leaves behind the flower */
   content: "";
@@ -478,10 +479,10 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   .top-hud { gap: 4px; margin-bottom: 6px; }
   .top-hud .credit-panel { min-width: 140px; }
   .top-hud .meter-panel { grid-auto-columns: minmax(64px, 1fr); }
-  .reel-frame { --marqueeH: 24px; padding: calc(var(--marqueeH) + 8px) 12px 10px; border-radius: 14px; }
-  .reel-frame .hibiscus-side { width: 54px; height: 54px; top: 6px; }
-  .reel-frame #hibiscus { left: 6px; }
-  .reel-frame #hibiscus-right { right: 6px; }
+  .reel-frame { --marqueeH: 24px; padding: calc(var(--marqueeH) + 8px) 12px 10px; border-radius: 14px; gap: 6px; }
+  .reel-frame .hibiscus-side { width: 54px; height: 54px; }
+  .reel-frame #hibiscus { left: 0; }
+  .reel-frame #hibiscus-right { right: 0; }
     /* Move/size the credit display for phones */
     .credit-panel { padding: 6px 10px; min-width: 140px; }
     .digit-display { font-size: clamp(26px, 7vw, 38px); }
