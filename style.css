@@ -80,6 +80,7 @@ body.dark {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: clamp(8px, 2vw, 16px);
   --marqueeH: clamp(16px, 3vw, 24px);
   padding: calc(var(--marqueeH) + 10px) clamp(14px, 3vw, 20px) clamp(10px, 2vw, 16px);
   border-radius: 16px;
@@ -228,6 +229,7 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 .reel-frame #hibiscus { left: -26px; }
 .reel-frame #hibiscus-right { right: -26px; }
 .hibiscus-side::after {
+  
   /* Leaves behind the flower */
   content: "";
   position: absolute;
@@ -416,10 +418,12 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   .top-hud { gap: 4px; margin-bottom: 6px; }
   .top-hud .credit-panel { min-width: 140px; }
   .top-hud .meter-panel { grid-auto-columns: minmax(64px, 1fr); }
+
   .reel-frame { --marqueeH: 24px; padding: calc(var(--marqueeH) + 8px) 12px 10px; border-radius: 14px; }
   .reel-frame .hibiscus-side { width: 54px; height: 54px; top: -24px; }
   .reel-frame #hibiscus { left: -12px; }
   .reel-frame #hibiscus-right { right: -12px; }
+    
     /* Move/size the credit display for phones */
     .credit-panel { padding: 6px 10px; min-width: 140px; }
     .digit-display { font-size: clamp(26px, 7vw, 38px); }
