@@ -57,7 +57,7 @@ const SETTINGS = {
   3: { big: 95, reg: 143, freeze: 300 },
   4: { big: 93, reg: 140, freeze: 300 },
   5: { big: 89, reg: 138, freeze: 300 },
-  6: { big: 87,   reg: 135,  freeze: 10 }, // デモ用高設定
+  6: { big: 30,   reg: 40,  freeze: 80 }, // デモ用高設定
 };
 const PAYOUT = { big: 350, reg: 120, freeze: 2000 };
 let currentSetting = 1;
@@ -931,7 +931,7 @@ function handleSpinV3() {
           spinBtn.removeAttribute("aria-busy");
           updateCoinDisplay();
           setUndoDisabled(!lastState);
-        });
+        }, { fixedTicks: 25, maxDurationMs: 600, soundEveryOverride: 3 });
         awarded = true; return;
       } else if (u < pFreeze + pBig + pReg) {
         setMessage("🌺 REGボーナス！100枚GET！");
@@ -943,7 +943,7 @@ function handleSpinV3() {
           spinBtn.removeAttribute("aria-busy");
           updateCoinDisplay();
           setUndoDisabled(!lastState);
-        });
+        }, { fixedTicks: 18, maxDurationMs: 450, soundEveryOverride: 4 });
         awarded = true; return;
       }
 
@@ -1145,7 +1145,7 @@ function evaluateManualOutcome() {
       updateBetDisplay();
       updatePanelControls();
       try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
-    });
+    }, { fixedTicks: 25, maxDurationMs: 600, soundEveryOverride: 3 });
     return;
   }
   if (pendingBonus === 'freeze') {
@@ -1173,7 +1173,7 @@ function evaluateManualOutcome() {
       updateBetDisplay();
       updatePanelControls();
       try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
-    });
+    }, { fixedTicks: 18, maxDurationMs: 450, soundEveryOverride: 4 });
     return;
   }
   // 判定は5ライン（3横 + 斜め2）
@@ -1219,16 +1219,33 @@ function evaluateManualOutcome() {
   }
 }
 
-function addCoinsGradually(amount, onDone) {
+function addCoinsGradually(amount, onDone, opts = {}) {
   let paid = 0;
   if (amount <= 0) { if (onDone) onDone(); return; }
+  const {
+    fixedTicks,         // 例: 25 → 25カウントで終了
+    maxDurationMs = 600,// fixedTicks使用時の総時間
+    unitOverride,       // 例: 10（10枚刻み）
+    intervalOverrideMs, // 例: 12（ミリ秒）
+    soundEveryOverride  // 例: 3（SE間引き）
+    } = opts;
   // For very large awards (e.g., 2000枚 SUPER BIG), count by hundreds
   const useHundreds = amount >= 2000;
-  const unit = useHundreds ? 100 : 1; // coins per tick
-  const intervalMs = useHundreds
-    ? 45 // ~0.9s for 2000枚 (20 ticks)
-    : (amount > 1200 ? 6 : amount > 600 ? 8 : amount > 300 ? 12 : amount > 120 ? 16 : amount > 50 ? 24 : 40);
-  const soundEvery = useHundreds ? 1 : (amount > 1200 ? 5 : amount > 300 ? 3 : 1);
+  const unitDefault = useHundreds ? 100 : 1;
+  let unit = unitOverride ?? unitDefault;
+  let intervalMs = intervalOverrideMs ?? (useHundreds 
+    ? 45
+    : (amount > 1200 ? 6 : amount > 600 ? 8 : amount > 300 ? 12 : amount > 120 ? 16 : amount > 50 ? 24 : 40));
+ 
+  // 固定カウント運転（演出時間を一定に）
+  if (fixedTicks && fixedTicks > 0) {
+      unit = Math.max(1, Math.ceil(amount / fixedTicks));
+      intervalMs = Math.max(6, Math.floor(maxDurationMs / fixedTicks));
+    }
+
+  const soundEvery = (soundEveryOverride != null)
+      ? soundEveryOverride
+      : (useHundreds ? 1 : (amount > 1200 ? 5 : amount > 300 ? 3 : 1));
   const iv = setInterval(() => {
     ensureAudio();
     const inc = Math.min(unit, amount - paid);
