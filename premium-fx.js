@@ -95,8 +95,9 @@
       x = window.innerWidth / 2;
       y = window.innerHeight / 2;
     }
-    state.anchor.x = x * state.dpr;
-    state.anchor.y = y * state.dpr;
+    // store anchor in CSS pixel units; the canvas transform handles DPR scaling
+    state.anchor.x = x;
+    state.anchor.y = y;
   }
 
   function mergeConfig(cfg) {
