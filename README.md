@@ -24,6 +24,27 @@
 ## サウンド
 Web Audio API でシンプルなクリック/勝利/エラー音を生成しています。右上のスピーカーボタンでオン・オフを切り替え可能です。
 
+## プレミア演出
+フリーズ当選時は `premiumFx` による全画面演出を再生できます。
+
+```html
+<script src="./premium-fx.js"></script>
+<script>premiumFx.mount();</script>
+```
+
+```js
+premiumFx.play({
+  durationMs: 3200,
+  palette: { bg: "#000", primary: "#e40913", secondary: "#ffd166" },
+  anchor: { mode: "selector", selector: "#reel1" },
+  audio: { enabled: true, volume: 0.9 },
+  accessibility: {
+    reduceMotion: matchMedia('(prefers-reduced-motion)').matches,
+    safeFlash: true
+  }
+});
+```
+
 ## キーバインド
 - **Space / Enter**: スピン
 - **Ctrl+Z / Cmd+Z**: 直前のスピンを取り消し
