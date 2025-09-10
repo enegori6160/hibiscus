@@ -52,14 +52,14 @@ function setLeverEngaged(on) {
 }
 // 設定（1〜6）の確率テーブルと配当
 const SETTINGS = {
-  1: { big: 100, reg: 150, freeze: 300 },
-  2: { big: 97, reg: 145, freeze: 300 },
-  3: { big: 95, reg: 143, freeze: 300 },
-  4: { big: 93, reg: 140, freeze: 300 },
-  5: { big: 89, reg: 138, freeze: 300 },
-  6: { big: 30,   reg: 40,  freeze: 80 }, // デモ用高設定
+  1: { big: 292, reg: 489, freeze: 2000 },
+  2: { big: 280, reg: 452, freeze: 2000 },
+  3: { big: 268, reg: 420, freeze: 2000 },
+  4: { big: 257, reg: 390, freeze: 2000 },
+  5: { big: 244, reg: 360, freeze: 2000 },
+  6: { big: 50,  reg: 68 ,  freeze: 100 }, // デモ用高設定
 };
-const PAYOUT = { big: 350, reg: 120, freeze: 2000 };
+const PAYOUT = { big: 350, reg: 120, freeze: 3000 };
 let currentSetting = 1;
 
 // Utilities: persistence
@@ -389,7 +389,8 @@ function glowHibiscus(typeOrPattern = 'normal') {
       const premiumIds = [2,3,4,5,6,7,8,9,10,11,12]; // 通常プレミア
       const ultraIds = [13,14]; // 超プレミア
       let idx;
-      if (Math.random() < 0.75) {
+      // 65%: 通常, 10%: 超プレミア, 25%: プレミア
+      if (Math.random() < 0.65) {
         idx = 1; // normal
       } else {
         idx = (Math.random() < 0.10)
