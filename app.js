@@ -1274,7 +1274,18 @@ function pullLever() {
   pendingBonus = u < pFreeze ? 'freeze' : (u < pFreeze + pBig ? 'big' : (u < pFreeze + pBig + pReg ? 'reg' : null));
   // レバーオンで点灯・SE（当選時）
   if (pendingBonus) {
-    if (pendingBonus === 'freeze') { glowFreeze(); playFreezeFX(); setTimeout(runFreezeSequence, 350); }
+    if (pendingBonus === 'freeze') {
+      premiumFx.play({
+        durationMs: 3200,
+        palette: { bg: "#000", primary: "#e40913", secondary: "#ffd166" },
+        audio: { enabled: true, volume: 0.9 },
+        accessibility: {
+          reduceMotion: matchMedia('(prefers-reduced-motion)').matches,
+          safeFlash: true
+        }
+      }).catch(console.error);
+      glowFreeze(); playFreezeFX(); setTimeout(runFreezeSequence, 350);
+    }
     else { glowHibiscus(pendingBonus === 'big' ? 'big' : 'reg'); if (!(pendingBonus === 'big' && hibiscusMute)) playKyuin(); }
     // Pattern 10 immediate delayed explosion after lever-on
     if (hibiscusPattern === 10) { setTimeout(()=>{ flashColor('red'); playExplosion(); }, 650); }
