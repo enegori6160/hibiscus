@@ -578,13 +578,15 @@ function checkQuests() {
       if (q.progress >= q.goal && !q.completed) {
         q.completed = true;
         const next = Math.max(...unlockedSettings) + 1;
+        let msg = `${q.label}達成！`;
         if (SETTINGS[next]) {
           unlockSetting(next);
-          try { alert(`おめでとう！${q.label}達成！設定${next}が開放されました！`); } catch {}
+          msg += `設定${next}が開放されました！`;
         } else {
-          try { alert(`おめでとう！${q.label}達成！`); } catch {}
+          msg += '全ての設定を開放済みです！';
         }
-        setMessage(`${q.label}達成！`);
+        try { alert(`おめでとう！${msg}`); } catch {}
+        setMessage(msg);
       }
     }
   });
@@ -596,7 +598,6 @@ function onSpinStart() {
 
   spinCountCurrent += 1;
   spinCountTotal += 1;
-  checkQuests();
   updateStatsDisplay();
   persistStats();
 
