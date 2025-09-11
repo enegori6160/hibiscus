@@ -68,6 +68,14 @@ const storage = {
   load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
 };
 
+// Quest data
+const defaultQuests = [
+  { id: 'spins50', label: '50回転しよう', goal: 50, progress: 0, type: 'spins', completed: false },
+  { id: 'big1', label: 'BIGを1回引こう', goal: 1, progress: 0, type: 'big', completed: false },
+  { id: 'reg1', label: 'REGを1回引こう', goal: 1, progress: 0, type: 'reg', completed: false },
+];
+let quests = storage.load('quests', defaultQuests);
+
 function ensureAudio() {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -524,8 +532,50 @@ function persistStats() {
   storage.save('stats', { spinCountCurrent, spinCountTotal, countBig, countReg, countFreeze });
 }
 
+function updateQuestDisplay() {
+  const list = document.getElementById('questsList');
+  if (!list) return;
+  list.innerHTML = '';
+  quests.forEach(q => {
+    const li = document.createElement('li');
+    li.className = 'quest-item';
+    if (q.completed) li.classList.add('completed');
+    const title = document.createElement('div');
+    title.className = 'quest-title';
+    title.textContent = q.label;
+    const bar = document.createElement('div');
+    bar.className = 'quest-progress';
+    const inner = document.createElement('div');
+    inner.className = 'quest-progress-bar';
+    inner.style.width = `${Math.min(100, (q.progress / q.goal) * 100)}%`;
+    bar.appendChild(inner);
+    const count = document.createElement('div');
+    count.className = 'quest-count';
+    count.textContent = `${q.progress}/${q.goal}`;
+    li.appendChild(title);
+    li.appendChild(bar);
+    li.appendChild(count);
+    list.appendChild(li);
+  });
+}
+
+function checkQuests() {
+  quests.forEach(q => {
+    let current = 0;
+    if (q.type === 'spins') current = spinCountTotal;
+    else if (q.type === 'big') current = countBig;
+    else if (q.type === 'reg') current = countReg;
+    if (current > q.progress) {
+      q.progress = Math.min(current, q.goal);
+      if (q.progress >= q.goal) q.completed = true;
+    }
+  });
+  storage.save('quests', quests);
+  updateQuestDisplay();
+}
+
 function onSpinStart() {
-  spinCountCurrent += 1; spinCountTotal += 1; updateStatsDisplay(); persistStats();
+  spinCountCurrent += 1; spinCountTotal += 1; updateStatsDisplay(); persistStats(); checkQuests();
 }
 
 function onBonus(kind) {
@@ -533,7 +583,7 @@ function onBonus(kind) {
   else if (kind === 'reg') countReg += 1;
   else if (kind === 'freeze') countFreeze += 1;
   spinCountCurrent = 0; // reset games since last bonus
-  updateStatsDisplay(); persistStats();
+  updateStatsDisplay(); persistStats(); checkQuests();
 }
 
 function handleSpin() {
@@ -714,6 +764,7 @@ try {
   reflectThemeButtons();
   reflectSoundButtons();
   updateStatsDisplay();
+  updateQuestDisplay();
   // Unlock audio on first user interaction
   try {
     ['pointerdown','keydown','touchstart','click'].forEach((ev)=>{
@@ -732,8 +783,11 @@ function resetGame() {
   countBig = 0;
   countReg = 0;
   countFreeze = 0;
+  quests.forEach(q => { q.progress = 0; q.completed = false; });
+  storage.save('quests', quests);
   updateStatsDisplay();
   persistStats();
+  updateQuestDisplay();
   setMessage("ゲームをリセットしました");
   playSound("click");
   const reels = document.querySelectorAll(".reel");
