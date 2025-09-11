@@ -409,6 +409,13 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 /* How to / Settings */
 .howto-list { margin: 0; padding-left: 1.2rem; }
 .howto-list li { margin: 4px 0; }
+.quests-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.quest-item { display: grid; gap: 4px; }
+.quest-title { font-weight: 600; }
+.quest-item.completed .quest-title { color: var(--color-muted); text-decoration: line-through; }
+.quest-progress { height: 8px; background: var(--color-border); border-radius: 4px; overflow: hidden; }
+.quest-progress-bar { height: 100%; background: var(--color-primary); width: 0%; transition: width 0.3s ease; }
+.quest-count { font-size: 0.85em; color: var(--color-muted); text-align: right; }
 .settings-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 520px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
 .setting-item { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; align-items: center; padding: 10px; border: 1px dashed var(--color-border); border-radius: 10px; }
