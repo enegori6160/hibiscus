@@ -74,6 +74,14 @@ const storage = {
   load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
 };
 
+// Quest data
+const defaultQuests = [
+  { id: 'spins50', label: '50回転しよう', goal: 50, progress: 0, type: 'spins', completed: false },
+  { id: 'big1', label: 'BIGを1回引こう', goal: 1, progress: 0, type: 'big', completed: false },
+  { id: 'reg1', label: 'REGを1回引こう', goal: 1, progress: 0, type: 'reg', completed: false },
+];
+let quests = storage.load('quests', defaultQuests);
+
 function ensureAudio() {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -557,12 +565,56 @@ function checkQuests(event, kind) {
   }
 }
 
+function updateQuestDisplay() {
+  const list = document.getElementById('questsList');
+  if (!list) return;
+  list.innerHTML = '';
+  quests.forEach(q => {
+    const li = document.createElement('li');
+    li.className = 'quest-item';
+    if (q.completed) li.classList.add('completed');
+    const title = document.createElement('div');
+    title.className = 'quest-title';
+    title.textContent = q.label;
+    const bar = document.createElement('div');
+    bar.className = 'quest-progress';
+    const inner = document.createElement('div');
+    inner.className = 'quest-progress-bar';
+    inner.style.width = `${Math.min(100, (q.progress / q.goal) * 100)}%`;
+    bar.appendChild(inner);
+    const count = document.createElement('div');
+    count.className = 'quest-count';
+    count.textContent = `${q.progress}/${q.goal}`;
+    li.appendChild(title);
+    li.appendChild(bar);
+    li.appendChild(count);
+    list.appendChild(li);
+  });
+}
+
+function checkQuests() {
+  quests.forEach(q => {
+    let current = 0;
+    if (q.type === 'spins') current = spinCountTotal;
+    else if (q.type === 'big') current = countBig;
+    else if (q.type === 'reg') current = countReg;
+    if (current > q.progress) {
+      q.progress = Math.min(current, q.goal);
+      if (q.progress >= q.goal) q.completed = true;
+    }
+  });
+  storage.save('quests', quests);
+  updateQuestDisplay();
+}
+
 function onSpinStart() {
+
   spinCountCurrent += 1;
   spinCountTotal += 1;
   checkQuests('spin');
   updateStatsDisplay();
   persistStats();
+
 }
 
 function onBonus(kind) {
@@ -570,9 +622,11 @@ function onBonus(kind) {
   else if (kind === 'reg') countReg += 1;
   else if (kind === 'freeze') countFreeze += 1;
   spinCountCurrent = 0; // reset games since last bonus
+
   checkQuests('bonus', kind);
   updateStatsDisplay();
   persistStats();
+
 }
 
 function handleSpin() {
@@ -645,17 +699,53 @@ document.addEventListener("click", (e) => {
 });
 
 // --- 設定選択と新しいスピンロジック（設定1〜6対応） ---
+let unlockedSettings = storage.load("unlockedSettings", [1, 2]);
+
+function saveUnlockedSettings() {
+  storage.save("unlockedSettings", unlockedSettings);
+}
+saveUnlockedSettings();
+
+function updateSettingOptions() {
+  if (!settingSelect) return;
+  settingSelect.innerHTML = "";
+  unlockedSettings.sort((a, b) => a - b);
+  for (const v of unlockedSettings) {
+    const opt = document.createElement("option");
+    opt.value = String(v);
+    opt.textContent = v === 6 ? "超高確率モード" : String(v);
+    settingSelect.appendChild(opt);
+  }
+  if (!unlockedSettings.includes(currentSetting)) {
+    currentSetting = unlockedSettings[0];
+  }
+  settingSelect.value = String(currentSetting);
+}
+
+function unlockSetting(v) {
+  v = Number(v);
+  if (!SETTINGS[v] || unlockedSettings.includes(v)) return;
+  unlockedSettings.push(v);
+  saveUnlockedSettings();
+  updateSettingOptions();
+}
+try { window.unlockSetting = unlockSetting; } catch {}
+
 function handleSettingChange(value) {
-  const v = String(value);
-  if (!SETTINGS[v]) return;
-  currentSetting = Number(v);
+  const v = Number(value);
+  if (!unlockedSettings.includes(v) || !SETTINGS[v]) {
+    if (settingSelect) settingSelect.value = String(currentSetting);
+    return;
+  }
+  currentSetting = v;
   storage.save("setting", currentSetting);
 }
+
 const settingSelect = document.getElementById("settingSelect");
 if (settingSelect) {
-  const saved = storage.load("setting", 1);
-  currentSetting = Number(saved);
-  settingSelect.value = String(currentSetting);
+  const saved = Number(storage.load("setting", 1));
+  currentSetting = unlockedSettings.includes(saved) ? saved : unlockedSettings[0];
+  updateSettingOptions();
   settingSelect.addEventListener("change", (e) => handleSettingChange(e.target.value));
 }
 
@@ -757,7 +847,9 @@ try {
   reflectThemeButtons();
   reflectSoundButtons();
   updateStatsDisplay();
+
   persistStats();
+
   // Unlock audio on first user interaction
   try {
     ['pointerdown','keydown','touchstart','click'].forEach((ev)=>{
@@ -776,8 +868,11 @@ function resetGame() {
   countBig = 0;
   countReg = 0;
   countFreeze = 0;
+  quests.forEach(q => { q.progress = 0; q.completed = false; });
+  storage.save('quests', quests);
   updateStatsDisplay();
   persistStats();
+  updateQuestDisplay();
   setMessage("ゲームをリセットしました");
   playSound("click");
   const reels = document.querySelectorAll(".reel");
