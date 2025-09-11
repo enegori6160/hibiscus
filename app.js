@@ -75,6 +75,8 @@ const defaultQuests = [
   { id: 'spins50', label: '50回転しよう', goal: 50, progress: 0, type: 'spins', completed: false },
   { id: 'big1', label: 'BIGを1回引こう', goal: 1, progress: 0, type: 'big', completed: false },
   { id: 'reg1', label: 'REGを1回引こう', goal: 1, progress: 0, type: 'reg', completed: false },
+  { id: 'freeze1', label: 'フリーズを1回引こう', goal: 1, progress: 0, type: 'freeze', completed: false },
+  { id: 'coins5000', label: '所持コインを5000枚にしよう', goal: 5000, progress: 0, type: 'coins', completed: false },
 ];
 let quests = storage.load('quests', defaultQuests);
 
@@ -519,6 +521,7 @@ function updateCoinDisplay() {
     try { top.classList.remove('ping'); void top.offsetWidth; top.classList.add('ping'); } catch {}
   }
   storage.save("coinBalance", coinBalance);
+  checkQuests();
 }
 
 function updateStatsDisplay() {
@@ -568,10 +571,19 @@ function checkQuests() {
     if (q.type === 'spins') current = spinCountTotal;
     else if (q.type === 'big') current = countBig;
     else if (q.type === 'reg') current = countReg;
+    else if (q.type === 'freeze') current = countFreeze;
+    else if (q.type === 'coins') current = coinBalance;
     if (current > q.progress) {
       q.progress = Math.min(current, q.goal);
       if (q.progress >= q.goal && !q.completed) {
         q.completed = true;
+        const next = Math.max(...unlockedSettings) + 1;
+        if (SETTINGS[next]) {
+          unlockSetting(next);
+          try { alert(`おめでとう！${q.label}達成！設定${next}が開放されました！`); } catch {}
+        } else {
+          try { alert(`おめでとう！${q.label}達成！`); } catch {}
+        }
         setMessage(`${q.label}達成！`);
       }
     }
