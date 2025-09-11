@@ -827,7 +827,9 @@ try {
   } catch {}
   try {
     const q = storage.load('quests', null);
-    if (q) { quests = Object.assign(quests, q); }
+    if (q) {
+      quests = defaultQuests.map(dq => ({ ...dq, ...(q.find(x => x.id === dq.id) || {}) }));
+    }
   } catch {}
   reflectThemeButtons();
   reflectSoundButtons();
