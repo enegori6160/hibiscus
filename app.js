@@ -44,6 +44,12 @@ let spinCountTotal = 0;   // 総回転数
 let countBig = 0;         // 累計BIG
 let countReg = 0;         // 累計REG
 let countFreeze = 0;      // 累計フリーズ（特殊）
+// Quest progress (separate from session stats)
+let quests = {
+  spins: { progress: 0, target: 100, completed: false },
+  wins: { progress: 0, target: 10, completed: false },
+  premium: { progress: 0, target: 1, completed: false }
+};
 function setLeverEngaged(on) {
   try {
     const leverBtn = document.getElementById('lever');
@@ -522,10 +528,41 @@ function updateStatsDisplay() {
 
 function persistStats() {
   storage.save('stats', { spinCountCurrent, spinCountTotal, countBig, countReg, countFreeze });
+  storage.save('quests', quests);
+}
+
+function checkQuests(event, kind) {
+  if (event === 'spin' && !quests.spins.completed) {
+    quests.spins.progress += 1;
+    if (quests.spins.progress >= quests.spins.target) {
+      quests.spins.completed = true;
+      setMessage('スピンクエスト達成！');
+    }
+  }
+  if (event === 'bonus') {
+    if ((kind === 'big' || kind === 'reg') && !quests.wins.completed) {
+      quests.wins.progress += 1;
+      if (quests.wins.progress >= quests.wins.target) {
+        quests.wins.completed = true;
+        setMessage('ボーナスクエスト達成！');
+      }
+    }
+    if (kind === 'freeze' && !quests.premium.completed) {
+      quests.premium.progress += 1;
+      if (quests.premium.progress >= quests.premium.target) {
+        quests.premium.completed = true;
+        setMessage('プレミアクエスト達成！');
+      }
+    }
+  }
 }
 
 function onSpinStart() {
-  spinCountCurrent += 1; spinCountTotal += 1; updateStatsDisplay(); persistStats();
+  spinCountCurrent += 1;
+  spinCountTotal += 1;
+  checkQuests('spin');
+  updateStatsDisplay();
+  persistStats();
 }
 
 function onBonus(kind) {
@@ -533,7 +570,9 @@ function onBonus(kind) {
   else if (kind === 'reg') countReg += 1;
   else if (kind === 'freeze') countFreeze += 1;
   spinCountCurrent = 0; // reset games since last bonus
-  updateStatsDisplay(); persistStats();
+  checkQuests('bonus', kind);
+  updateStatsDisplay();
+  persistStats();
 }
 
 function handleSpin() {
@@ -711,9 +750,14 @@ try {
     const s = storage.load('stats', null);
     if (s) { spinCountCurrent = s.spinCountCurrent||0; spinCountTotal = s.spinCountTotal||0; countBig = s.countBig||0; countReg = s.countReg||0; countFreeze = s.countFreeze||0; }
   } catch {}
+  try {
+    const q = storage.load('quests', null);
+    if (q) { quests = Object.assign(quests, q); }
+  } catch {}
   reflectThemeButtons();
   reflectSoundButtons();
   updateStatsDisplay();
+  persistStats();
   // Unlock audio on first user interaction
   try {
     ['pointerdown','keydown','touchstart','click'].forEach((ev)=>{
