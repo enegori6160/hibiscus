@@ -45,11 +45,7 @@ let countBig = 0;         // 累計BIG
 let countReg = 0;         // 累計REG
 let countFreeze = 0;      // 累計フリーズ（特殊）
 // Quest progress (separate from session stats)
-let quests = {
-  spins: { progress: 0, target: 100, completed: false },
-  wins: { progress: 0, target: 10, completed: false },
-  premium: { progress: 0, target: 1, completed: false }
-};
+// Loaded from storage; see defaultQuests below
 function setLeverEngaged(on) {
   try {
     const leverBtn = document.getElementById('lever');
@@ -539,32 +535,6 @@ function persistStats() {
   storage.save('quests', quests);
 }
 
-function checkQuests(event, kind) {
-  if (event === 'spin' && !quests.spins.completed) {
-    quests.spins.progress += 1;
-    if (quests.spins.progress >= quests.spins.target) {
-      quests.spins.completed = true;
-      setMessage('スピンクエスト達成！');
-    }
-  }
-  if (event === 'bonus') {
-    if ((kind === 'big' || kind === 'reg') && !quests.wins.completed) {
-      quests.wins.progress += 1;
-      if (quests.wins.progress >= quests.wins.target) {
-        quests.wins.completed = true;
-        setMessage('ボーナスクエスト達成！');
-      }
-    }
-    if (kind === 'freeze' && !quests.premium.completed) {
-      quests.premium.progress += 1;
-      if (quests.premium.progress >= quests.premium.target) {
-        quests.premium.completed = true;
-        setMessage('プレミアクエスト達成！');
-      }
-    }
-  }
-}
-
 function updateQuestDisplay() {
   const list = document.getElementById('questsList');
   if (!list) return;
@@ -600,7 +570,10 @@ function checkQuests() {
     else if (q.type === 'reg') current = countReg;
     if (current > q.progress) {
       q.progress = Math.min(current, q.goal);
-      if (q.progress >= q.goal) q.completed = true;
+      if (q.progress >= q.goal && !q.completed) {
+        q.completed = true;
+        setMessage(`${q.label}達成！`);
+      }
     }
   });
   storage.save('quests', quests);
@@ -611,7 +584,7 @@ function onSpinStart() {
 
   spinCountCurrent += 1;
   spinCountTotal += 1;
-  checkQuests('spin');
+  checkQuests();
   updateStatsDisplay();
   persistStats();
 
@@ -623,7 +596,7 @@ function onBonus(kind) {
   else if (kind === 'freeze') countFreeze += 1;
   spinCountCurrent = 0; // reset games since last bonus
 
-  checkQuests('bonus', kind);
+  checkQuests();
   updateStatsDisplay();
   persistStats();
 
