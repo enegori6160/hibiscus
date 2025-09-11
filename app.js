@@ -727,6 +727,13 @@ function resetGame() {
   coinBalance = 100;
   betCount = 0;
   lastState = null;
+  spinCountCurrent = 0;
+  spinCountTotal = 0;
+  countBig = 0;
+  countReg = 0;
+  countFreeze = 0;
+  updateStatsDisplay();
+  persistStats();
   setMessage("ゲームをリセットしました");
   playSound("click");
   const reels = document.querySelectorAll(".reel");
