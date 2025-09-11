@@ -656,17 +656,53 @@ document.addEventListener("click", (e) => {
 });
 
 // --- 設定選択と新しいスピンロジック（設定1〜6対応） ---
+let unlockedSettings = storage.load("unlockedSettings", [1, 2]);
+
+function saveUnlockedSettings() {
+  storage.save("unlockedSettings", unlockedSettings);
+}
+saveUnlockedSettings();
+
+function updateSettingOptions() {
+  if (!settingSelect) return;
+  settingSelect.innerHTML = "";
+  unlockedSettings.sort((a, b) => a - b);
+  for (const v of unlockedSettings) {
+    const opt = document.createElement("option");
+    opt.value = String(v);
+    opt.textContent = v === 6 ? "超高確率モード" : String(v);
+    settingSelect.appendChild(opt);
+  }
+  if (!unlockedSettings.includes(currentSetting)) {
+    currentSetting = unlockedSettings[0];
+  }
+  settingSelect.value = String(currentSetting);
+}
+
+function unlockSetting(v) {
+  v = Number(v);
+  if (!SETTINGS[v] || unlockedSettings.includes(v)) return;
+  unlockedSettings.push(v);
+  saveUnlockedSettings();
+  updateSettingOptions();
+}
+try { window.unlockSetting = unlockSetting; } catch {}
+
 function handleSettingChange(value) {
-  const v = String(value);
-  if (!SETTINGS[v]) return;
-  currentSetting = Number(v);
+  const v = Number(value);
+  if (!unlockedSettings.includes(v) || !SETTINGS[v]) {
+    if (settingSelect) settingSelect.value = String(currentSetting);
+    return;
+  }
+  currentSetting = v;
   storage.save("setting", currentSetting);
 }
+
 const settingSelect = document.getElementById("settingSelect");
 if (settingSelect) {
-  const saved = storage.load("setting", 1);
-  currentSetting = Number(saved);
-  settingSelect.value = String(currentSetting);
+  const saved = Number(storage.load("setting", 1));
+  currentSetting = unlockedSettings.includes(saved) ? saved : unlockedSettings[0];
+  updateSettingOptions();
   settingSelect.addEventListener("change", (e) => handleSettingChange(e.target.value));
 }
 
