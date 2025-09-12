@@ -71,12 +71,13 @@ const storage = {
 };
 
 // Quest data
+// `unlock` property specifies which settings become available upon completion
 const defaultQuests = [
-  { id: 'spins50', label: '50回転しよう', goal: 50, progress: 0, type: 'spins', completed: false },
-  { id: 'big1', label: 'BIGを1回引こう', goal: 1, progress: 0, type: 'big', completed: false },
-  { id: 'reg1', label: 'REGを1回引こう', goal: 1, progress: 0, type: 'reg', completed: false },
-  { id: 'freeze1', label: 'フリーズを1回引こう', goal: 1, progress: 0, type: 'freeze', completed: false },
-  { id: 'coins5000', label: '所持コインを5000枚にしよう', goal: 5000, progress: 0, type: 'coins', completed: false },
+  { id: 'spins50', label: '50回転しよう', goal: 50, progress: 0, type: 'spins', completed: false, unlock: [3] },
+  { id: 'big1', label: 'BIGを1回引こう', goal: 1, progress: 0, type: 'big', completed: false, unlock: [4] },
+  { id: 'reg1', label: 'REGを1回引こう', goal: 1, progress: 0, type: 'reg', completed: false, unlock: [5] },
+  { id: 'freeze1', label: 'フリーズを1回引こう', goal: 1, progress: 0, type: 'freeze', completed: false, unlock: [6] },
+  { id: 'coins5000', label: '所持コインを5000枚にしよう', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
 ];
 let quests = storage.load('quests', defaultQuests);
 
@@ -575,19 +576,20 @@ function checkQuests() {
     else if (q.type === 'coins') current = coinBalance;
     if (current > q.progress) {
       q.progress = Math.min(current, q.goal);
-      if (q.progress >= q.goal && !q.completed) {
-        q.completed = true;
-        const next = Math.max(...unlockedSettings) + 1;
-        let msg = `${q.label}達成！`;
-        if (SETTINGS[next]) {
-          unlockSetting(next);
-          msg += `設定${next}が開放されました！`;
-        } else {
-          msg += '全ての設定を開放済みです！';
-        }
-        try { alert(`おめでとう！${msg}`); } catch {}
-        setMessage(msg);
+    }
+    if (q.progress >= q.goal && !q.completed) {
+      q.completed = true;
+      let msg = `${q.label}達成！`;
+      const newly = (q.unlock || []).filter(v => SETTINGS[v] && !unlockedSettings.includes(v));
+      if (newly.length > 0) {
+        newly.forEach(v => unlockSetting(v));
+        const modes = newly.map(v => v === 6 ? '超高確率モード' : `設定${v}`).join('、');
+        msg += `${modes}が開放されました！`;
+      } else {
+        msg += '全ての設定を開放済みです！';
       }
+      try { alert(`おめでとう！${msg}`); } catch {}
+      setMessage(msg);
     }
   });
   storage.save('quests', quests);
@@ -832,6 +834,13 @@ try {
       quests = defaultQuests.map(dq => ({ ...dq, ...(q.find(x => x.id === dq.id) || {}) }));
     }
   } catch {}
+  // Ensure any previously completed quests unlock their settings
+  quests.forEach(q => {
+    if (q.completed && Array.isArray(q.unlock)) {
+      q.unlock.forEach(v => unlockSetting(v));
+    }
+  });
+  updateSettingOptions();
   reflectThemeButtons();
   reflectSoundButtons();
   updateStatsDisplay();
@@ -856,8 +865,6 @@ function resetGame() {
   countBig = 0;
   countReg = 0;
   countFreeze = 0;
-  quests.forEach(q => { q.progress = 0; q.completed = false; });
-  storage.save('quests', quests);
   updateStatsDisplay();
   persistStats();
   updateQuestDisplay();
