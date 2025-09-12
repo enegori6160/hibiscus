@@ -59,7 +59,7 @@ const SETTINGS = {
   3: { big: 268, reg: 420, freeze: 2000 },
   4: { big: 257, reg: 390, freeze: 2000 },
   5: { big: 244, reg: 360, freeze: 2000 },
-  6: { big: 50,  reg: 68 ,  freeze: 100 }, // デモ用高設定
+  6: { big: 50,  reg: 68 ,  freeze: 200 }, // 超高確率モード
 };
 const PAYOUT = { big: 350, reg: 120, freeze: 3000 };
 let currentSetting = 1;
@@ -73,10 +73,11 @@ const storage = {
 // Quest data
 // `unlock` property specifies which settings become available upon completion
 const defaultQuests = [
-  { id: 'spins50', label: '50回転回す', goal: 50, progress: 0, type: 'spins', completed: false, unlock: [3] },
+  { id: 'spins50', label: '200回転回す', goal: 200, progress: 0, type: 'spins', completed: false, unlock: [3] },
   { id: 'big1', label: 'BIGを1回引く', goal: 1, progress: 0, type: 'big', completed: false, unlock: [3] },
-  { id: 'big5', label: 'BIGを合計5回引く', goal: 5, progress: 0, type: 'big', completed: false, unlock: [4] },
-  { id: 'freeze1', label: 'フリーズを1回引く', goal: 1, progress: 0, type: 'freeze', completed: false, unlock: [6] },
+  { id: 'big5', label: 'BIGを5回引く', goal: 5, progress: 0, type: 'big', completed: false, unlock: [4] },
+  { id: 'spins2000', label: '2000回転回す', goal: 2000, progress: 0, type: 'spins', completed: false, unlock: [5] },
+  { id: 'freeze1', label: 'フリーズを引く', goal: 1, progress: 0, type: 'freeze', completed: false, unlock: [6] },
   { id: 'coins5000', label: '所持コインを5000枚にする', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
 ];
 let quests = storage.load('quests', defaultQuests);
@@ -261,10 +262,10 @@ function perCellFromSpinProb(P) {
   return Math.pow(Math.max(inner, 0), 1/3);
 }
 const Pspin = {
-  '🔔': 1/7.97,
+  '🔔': 1/10.97,
   '🍒': 1/61.8,
   '🍉': 1/170.1,
-  '⭐': 1/7.3,
+  '⭐': 1/9.3,
 };
 const Pcell = {
   '🔔': perCellFromSpinProb(Pspin['🔔']),
