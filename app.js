@@ -73,11 +73,11 @@ const storage = {
 // Quest data
 // `unlock` property specifies which settings become available upon completion
 const defaultQuests = [
-  { id: 'spins50', label: '50回転しよう', goal: 50, progress: 0, type: 'spins', completed: false, unlock: [3] },
-  { id: 'big1', label: 'BIGを1回引こう', goal: 1, progress: 0, type: 'big', completed: false, unlock: [4] },
-  { id: 'reg1', label: 'REGを1回引こう', goal: 1, progress: 0, type: 'reg', completed: false, unlock: [5] },
-  { id: 'freeze1', label: 'フリーズを1回引こう', goal: 1, progress: 0, type: 'freeze', completed: false, unlock: [6] },
-  { id: 'coins5000', label: '所持コインを5000枚にしよう', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
+  { id: 'spins50', label: '50回転回す', goal: 50, progress: 0, type: 'spins', completed: false, unlock: [3] },
+  { id: 'big1', label: 'BIGを1回引く', goal: 1, progress: 0, type: 'big', completed: false, unlock: [3] },
+  { id: 'big5', label: 'BIGを合計5回引く', goal: 5, progress: 0, type: 'big', completed: false, unlock: [4] },
+  { id: 'freeze1', label: 'フリーズを1回引く', goal: 1, progress: 0, type: 'freeze', completed: false, unlock: [6] },
+  { id: 'coins5000', label: '所持コインを5000枚にする', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
 ];
 let quests = storage.load('quests', defaultQuests);
 
