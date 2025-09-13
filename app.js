@@ -897,10 +897,10 @@ function resetGame() {
   betCount = 0;
   lastState = null;
   spinCountCurrent = 0;
-  spinCountTotal = 0;
-  countBig = 0;
-  countReg = 0;
-  countFreeze = 0;
+  //spinCountTotal = 0;
+  //countBig = 0;
+  //countReg = 0;
+  //countFreeze = 0;
   updateStatsDisplay();
   persistStats();
   updateQuestDisplay();
