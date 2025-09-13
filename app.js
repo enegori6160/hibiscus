@@ -584,7 +584,7 @@ function checkQuests() {
       if (newly.length > 0) {
         newly.forEach(v => unlockSetting(v));
         const modes = newly.map(v => v === 6 ? '超高確率モード' : `設定${v}`).join('、');
-        const msg = `${q.label}達成！${modes}が開放されました！`;
+        const msg = `${q.label}達成！${modes}が開放されました！下の設定から変更できます。`;
         try { alert(`おめでとう！${msg}`); } catch {}
         setMessage(msg);
       }
