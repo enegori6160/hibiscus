@@ -81,6 +81,7 @@ const defaultQuests = [
   { id: 'coins5000', label: '所持コインを5000枚にする', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
 ];
 let quests = storage.load('quests', defaultQuests);
+const milestones = storage.load('milestones', { coin10000: false, spins5000: false });
 
 function ensureAudio() {
   try {
@@ -524,6 +525,7 @@ function updateCoinDisplay() {
   }
   storage.save("coinBalance", coinBalance);
   checkQuests();
+  checkMilestones();
 }
 
 function updateStatsDisplay() {
@@ -533,6 +535,7 @@ function updateStatsDisplay() {
   set('statBIG', countBig);
   set('statREG', countReg);
   set('statSP', countFreeze);
+  checkMilestones();
 }
 
 function persistStats() {
@@ -567,6 +570,27 @@ function updateQuestDisplay() {
   });
 }
 
+function saveMilestones() {
+  storage.save('milestones', milestones);
+}
+
+function checkMilestones() {
+  let changed = false;
+  if (!milestones.coin10000 && coinBalance >= 10000) {
+    milestones.coin10000 = true;
+    setMessage('✨所持コインが10000枚になりました！おめでとう！✨');
+    changed = true;
+  }
+  if (!milestones.spins5000 && spinCountTotal >= 5000) {
+    milestones.spins5000 = true;
+    setMessage('🎉累計5000回転達成！たくさん遊んでくれてありがとう！ボーナス100枚プレゼント！🎁');
+    coinBalance += 100;
+    updateCoinDisplay();
+    changed = true;
+  }
+  if (changed) saveMilestones();
+}
+
 function checkQuests() {
   quests.forEach(q => {
     let current = 0;
@@ -598,6 +622,7 @@ function onSpinStart() {
 
   spinCountCurrent += 1;
   spinCountTotal += 1;
+  checkMilestones();
   updateStatsDisplay();
   persistStats();
 
