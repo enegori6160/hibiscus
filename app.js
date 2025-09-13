@@ -580,17 +580,14 @@ function checkQuests() {
     }
     if (q.progress >= q.goal && !q.completed) {
       q.completed = true;
-      let msg = `${q.label}達成！`;
       const newly = (q.unlock || []).filter(v => SETTINGS[v] && !unlockedSettings.includes(v));
       if (newly.length > 0) {
         newly.forEach(v => unlockSetting(v));
         const modes = newly.map(v => v === 6 ? '超高確率モード' : `設定${v}`).join('、');
-        msg += `${modes}が開放されました！`;
-      } else {
-        msg += '全ての設定を開放済みです！';
+        const msg = `${q.label}達成！${modes}が開放されました！`;
+        try { alert(`おめでとう！${msg}`); } catch {}
+        setMessage(msg);
       }
-      try { alert(`おめでとう！${msg}`); } catch {}
-      setMessage(msg);
     }
   });
   storage.save('quests', quests);
