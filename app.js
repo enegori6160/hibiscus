@@ -84,7 +84,7 @@ const defaultQuests = [
   { id: 'premiumAll', label: '全プレミア点灯パターン達成', goal: 16, progress: 0, type: 'premium', completed: false, unlock: [] },
 ];
 let quests = storage.load('quests', defaultQuests);
-const milestones = storage.load('milestones', { coin100000: false, spins10000: false,coin10000: false, spins5000: false });
+const milestones = storage.load('milestones', { coin100000: false, spins10000: false,coin10000: false, spins5000: false ,premiumAll: false});
 
 function recordPremiumPattern(idx) {
   if (idx > 1 && !premiumPatternsSeen.has(idx)) {
@@ -412,14 +412,14 @@ function glowHibiscus(typeOrPattern = 'normal') {
     else {
       // 75%: 通常点滅, 25%: プレミア
       // プレミアのうち10%を超プレミア（回転/葉）に振分 → 全体2.5%
-      const premiumIds = [2,3,4,5,6,7,8,9,10,11,12,15,16,17]; // 通常プレミア
-      const ultraIds = [13,14]; // 超プレミア
+      const premiumIds = [2,3,4,5,6,7,8,9,10,11,12,16]; // 通常プレミア
+      const ultraIds = [13,14,15,17]; // 超プレミア
       let idx;
       // 65%: 通常, 10%: 超プレミア, 25%: プレミア
       if (Math.random() < 0.65) {
         idx = 1; // normal
       } else {
-        idx = (Math.random() < 0.10)
+        idx = (Math.random() < 0.35)
           ? ultraIds[Math.floor(Math.random()*ultraIds.length)]
           : premiumIds[Math.floor(Math.random()*premiumIds.length)];
       }
@@ -625,6 +625,13 @@ function checkMilestones() {
     setMessage(msg);
     coinBalance += 500;
     updateCoinDisplay();
+    changed = true;
+  }
+  if (!milestones.premiumAll && premiumPatternsSeen.size >= 16) {
+    milestones.premiumAll = true;
+    const msg = '🎉全16種類のプレミア点灯パターンを達成しました！すごい！！'    
+    try { alert(`おめでと！${msg}`); } catch {}
+    setMessage(msg);
     changed = true;
   }
   if (changed) saveMilestones();
@@ -1311,7 +1318,7 @@ function runFreezeSequence() {
       reelSpinning[idx] = false; reelStopped[idx] = true;
     });
     try { const ov = document.createElement('div'); ov.className='flash-overlay'; document.body.appendChild(ov); setTimeout(()=>ov.remove(), 260); } catch {}
-    setMessage('✨ プレミアム発動 → SUPER BIG！');
+    setMessage('✨ FREEZE → SUPER BIG！');
     onBonus('freeze');
     addCoinsGradually(PAYOUT.freeze, () => {
       isSpinning = false; pendingBonus = null; freezeActive = false; betCount = 0;
