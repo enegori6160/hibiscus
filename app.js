@@ -579,24 +579,32 @@ function checkMilestones() {
   let changed = false;
   if (!milestones.coin10000 && coinBalance >= 10000) {
     milestones.coin10000 = true;
-    setMessage('✨所持コインが10000枚になりました！すごいね！！');
+    const msg = '✨所持コインが10000枚になりました！すごいね！！';
+    try { alert(`おめでと！${msg}`); } catch {}
+    setMessage(msg);
     changed = true;
   }
   if (!milestones.coin100000 && coinBalance >= 100000) {
     milestones.coin100000 = true;
-    setMessage('所持コインが10万枚になりました！すごいね！！やりすぎだって…🎉');
+    const msg = '所持コインが10万枚になりました！すごいね！！やりすぎだって…🎉';
+    try { alert(`おめでと！${msg}`); } catch {}
+    setMessage(msg);
     changed = true;
   }
   if (!milestones.spins10000 && spinCountTotal >= 10000) {
     milestones.spins10000 = true;
-    setMessage('🎉累計1万回転達成！やりこみましたね。ありがとねほんと、じゃあボーナス1000枚プレゼント！🎁');
+    const msg = '🎉累計1万回転達成！やりこみましたね。ありがとねほんと、じゃあボーナス1000枚プレゼント！🎁';
+    try { alert(`おめでと！${msg}`); } catch {}
+    setMessage(msg);
     coinBalance += 1000;
     updateCoinDisplay();
     changed = true;
   }
   if (!milestones.spins5000 && spinCountTotal >= 5000) {
     milestones.spins5000 = true;
-    setMessage('🎉累計5000回転達成！たくさん遊んでくれてありがとう！じゃあボーナス500枚プレゼント！🎁');
+    const msg = '🎉累計5000回転達成！たくさん遊んでくれてありがとう！じゃあボーナス500枚プレゼント！🎁';
+    try { alert(`おめでと！${msg}`); } catch {}
+    setMessage(msg);
     coinBalance += 500;
     updateCoinDisplay();
     changed = true;
