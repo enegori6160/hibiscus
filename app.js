@@ -391,7 +391,7 @@ function glowHibiscus(typeOrPattern = 'normal') {
   const left = document.getElementById("hibiscus");
   const right = document.getElementById("hibiscus-right");
   const all = [left, right].filter(Boolean);
-  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','glow-leaf','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
+  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','glow-leaf','glow-center','glow-petal3','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
   all.forEach(el => el.classList.remove(...clsAll));
 
   // decide pattern
@@ -402,7 +402,7 @@ function glowHibiscus(typeOrPattern = 'normal') {
     else {
       // 75%: 通常点滅, 25%: プレミア
       // プレミアのうち10%を超プレミア（回転/葉）に振分 → 全体2.5%
-      const premiumIds = [2,3,4,5,6,7,8,9,10,11,12]; // 通常プレミア
+      const premiumIds = [2,3,4,5,6,7,8,9,10,11,12,15,16,17]; // 通常プレミア
       const ultraIds = [13,14]; // 超プレミア
       let idx;
       // 65%: 通常, 10%: 超プレミア, 25%: プレミア
@@ -432,6 +432,13 @@ function glowHibiscus(typeOrPattern = 'normal') {
         case 12: pattern = 'glow-normal'; break; // 第二停止で黄ﾌﾗｯｼｭ（stopで処理）
         case 13: pattern = 'glow-rotate'; break; // 回転プレミア
         case 14: pattern = 'glow-leaf'; break; // 超プレミア：葉っぱのみ点滅
+        case 15: pattern = 'glow-center'; break; // 中心のみ点滅
+        case 16:
+                const target = Math.random() < 0.5 ? left : right;
+                target && target.classList.add('glow-normal');
+                hibiscusTimer = setTimeout(() => { clearHibiscusGlow(); }, 6000);
+                return;
+        case 17: pattern = 'glow-petal3'; break; // 花びら3枚のみ点滅
         default: pattern = 'glow-normal';
       }
     }
@@ -476,7 +483,7 @@ function clearHibiscusGlow() {
   const left = document.getElementById("hibiscus");
   const right = document.getElementById("hibiscus-right");
   const all = [left, right].filter(Boolean);
-  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','glow-leaf','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
+  const clsAll = ['glowing','glow-normal','glow-strobe','glow-breathe','glow-wave','glow-twinkle','glow-steady','glow-ultraslow','glow-rotate','glow-leaf','glow-center','glow-petal3','flash-red','flash-blue','flash-yellow','wave-a','wave-b'];
   all.forEach(el => el.classList.remove(...clsAll));
   hibiscusPattern = null; hibiscusMute = false;
 }
