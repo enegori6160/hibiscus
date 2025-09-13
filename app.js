@@ -76,6 +76,7 @@ const defaultQuests = [
   { id: 'spins50', label: '200回転回す', goal: 200, progress: 0, type: 'spins', completed: false, unlock: [3] },
   { id: 'big1', label: 'BIGを1回引く', goal: 1, progress: 0, type: 'big', completed: false, unlock: [3] },
   { id: 'big5', label: 'BIGを5回引く', goal: 5, progress: 0, type: 'big', completed: false, unlock: [4] },
+  { id: 'big10', label: 'BIGを10回引く', goal: 10, progress: 0, type: 'big', completed: false, unlock: [5] },
   { id: 'spins2000', label: '2000回転回す', goal: 2000, progress: 0, type: 'spins', completed: false, unlock: [5] },
   { id: 'freeze1', label: 'フリーズを引く', goal: 1, progress: 0, type: 'freeze', completed: false, unlock: [6] },
   { id: 'coins5000', label: '所持コインを5000枚にする', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
@@ -263,10 +264,10 @@ function perCellFromSpinProb(P) {
   return Math.pow(Math.max(inner, 0), 1/3);
 }
 const Pspin = {
-  '🔔': 1/10.97,
+  '🔔': 1/7.97,
   '🍒': 1/61.8,
   '🍉': 1/170.1,
-  '⭐': 1/9.3,
+  '⭐': 1/7.3,
 };
 const Pcell = {
   '🔔': perCellFromSpinProb(Pspin['🔔']),
