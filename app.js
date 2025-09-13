@@ -44,6 +44,7 @@ let spinCountTotal = 0;   // 総回転数
 let countBig = 0;         // 累計BIG
 let countReg = 0;         // 累計REG
 let countFreeze = 0;      // 累計フリーズ（特殊）
+let premiumPatternsSeen = new Set(); // 達成したプレミア点灯パターン
 // Quest progress (separate from session stats)
 // Loaded from storage; see defaultQuests below
 function setLeverEngaged(on) {
@@ -80,9 +81,18 @@ const defaultQuests = [
   { id: 'spins2000', label: '2000回転回す', goal: 2000, progress: 0, type: 'spins', completed: false, unlock: [5] },
   { id: 'freeze1', label: 'フリーズを引く', goal: 1, progress: 0, type: 'freeze', completed: false, unlock: [6] },
   { id: 'coins5000', label: '所持コインを5000枚にする', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
+  { id: 'premiumAll', label: '全プレミア点灯パターン達成', goal: 16, progress: 0, type: 'premium', completed: false, unlock: [] },
 ];
 let quests = storage.load('quests', defaultQuests);
 const milestones = storage.load('milestones', { coin100000: false, spins10000: false,coin10000: false, spins5000: false });
+
+function recordPremiumPattern(idx) {
+  if (idx > 1 && !premiumPatternsSeen.has(idx)) {
+    premiumPatternsSeen.add(idx);
+    persistStats();
+    checkQuests();
+  }
+}
 
 function ensureAudio() {
   try {
@@ -414,6 +424,7 @@ function glowHibiscus(typeOrPattern = 'normal') {
           : premiumIds[Math.floor(Math.random()*premiumIds.length)];
       }
       hibiscusPattern = idx; // 保存して停止タイミング演出に使用
+      recordPremiumPattern(idx);
       switch (idx) {
         case 1: pattern = 'glow-normal'; break; // 通常
         case 2: pattern = 'glow-normal'; hibiscusMute = true; break; // 無音＋通常
@@ -547,7 +558,7 @@ function updateStatsDisplay() {
 }
 
 function persistStats() {
-  storage.save('stats', { spinCountCurrent, spinCountTotal, countBig, countReg, countFreeze });
+  storage.save('stats', { spinCountCurrent, spinCountTotal, countBig, countReg, countFreeze, premiumPatterns: Array.from(premiumPatternsSeen) });
   storage.save('quests', quests);
 }
 
@@ -627,6 +638,7 @@ function checkQuests() {
     else if (q.type === 'reg') current = countReg;
     else if (q.type === 'freeze') current = countFreeze;
     else if (q.type === 'coins') current = coinBalance;
+    else if (q.type === 'premium') current = premiumPatternsSeen.size;
     if (current > q.progress) {
       q.progress = Math.min(current, q.goal);
     }
@@ -877,7 +889,14 @@ try {
   coinBalance = storage.load("coinBalance", 100);
   try {
     const s = storage.load('stats', null);
-    if (s) { spinCountCurrent = s.spinCountCurrent||0; spinCountTotal = s.spinCountTotal||0; countBig = s.countBig||0; countReg = s.countReg||0; countFreeze = s.countFreeze||0; }
+    if (s) {
+      spinCountCurrent = s.spinCountCurrent||0;
+      spinCountTotal = s.spinCountTotal||0;
+      countBig = s.countBig||0;
+      countReg = s.countReg||0;
+      countFreeze = s.countFreeze||0;
+      if (Array.isArray(s.premiumPatterns)) premiumPatternsSeen = new Set(s.premiumPatterns);
+    }
   } catch {}
   try {
     const q = storage.load('quests', null);
