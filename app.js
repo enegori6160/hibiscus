@@ -81,7 +81,7 @@ const defaultQuests = [
   { id: 'coins5000', label: '所持コインを5000枚にする', goal: 5000, progress: 0, type: 'coins', completed: false, unlock: [6] },
 ];
 let quests = storage.load('quests', defaultQuests);
-const milestones = storage.load('milestones', { coin10000: false, spins5000: false });
+const milestones = storage.load('milestones', { coin100000: false, spins10000: false,coin10000: false, spins5000: false });
 
 function ensureAudio() {
   try {
@@ -581,9 +581,21 @@ function checkMilestones() {
     setMessage('✨所持コインが10000枚になりました！すごいね！！');
     changed = true;
   }
+  if (!milestones.coin100000 && coinBalance >= 100000) {
+    milestones.coin100000 = true;
+    setMessage('所持コインが10万枚になりました！すごいね！！やりすぎだって…🎉');
+    changed = true;
+  }
+  if (!milestones.spins10000 && spinCountTotal >= 10000) {
+    milestones.spins10000 = true;
+    setMessage('🎉累計1万回転達成！やりこみましたね。ありがとねほんと、じゃあボーナス1000枚プレゼント！🎁');
+    coinBalance += 1000;
+    updateCoinDisplay();
+    changed = true;
+  }
   if (!milestones.spins5000 && spinCountTotal >= 5000) {
     milestones.spins5000 = true;
-    setMessage('🎉累計5000回転達成！たくさん遊んでくれてありがとう！ボーナス500枚プレゼント！🎁');
+    setMessage('🎉累計5000回転達成！たくさん遊んでくれてありがとう！じゃあボーナス500枚プレゼント！🎁');
     coinBalance += 500;
     updateCoinDisplay();
     changed = true;
