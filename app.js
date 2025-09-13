@@ -578,13 +578,13 @@ function checkMilestones() {
   let changed = false;
   if (!milestones.coin10000 && coinBalance >= 10000) {
     milestones.coin10000 = true;
-    setMessage('✨所持コインが10000枚になりました！おめでとう！✨');
+    setMessage('✨所持コインが10000枚になりました！すごいね！！');
     changed = true;
   }
   if (!milestones.spins5000 && spinCountTotal >= 5000) {
     milestones.spins5000 = true;
-    setMessage('🎉累計5000回転達成！たくさん遊んでくれてありがとう！ボーナス100枚プレゼント！🎁');
-    coinBalance += 100;
+    setMessage('🎉累計5000回転達成！たくさん遊んでくれてありがとう！ボーナス500枚プレゼント！🎁');
+    coinBalance += 500;
     updateCoinDisplay();
     changed = true;
   }
