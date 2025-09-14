@@ -422,11 +422,11 @@ function glowHibiscus(typeOrPattern = 'normal') {
       const premiumIds = [2,3,4,5,6,7,8,9,10,11,12,16]; // 通常プレミア
       const ultraIds = [13,14,15,17]; // 超プレミア
       let idx;
-      // 65%: 通常, 10%: 超プレミア, 25%: プレミア
+      // 65%: 通常, 35%: プレミア ,10%: 超プレミア,
       if (Math.random() < 0.65) {
         idx = 1; // normal
       } else {
-        idx = (Math.random() < 0.35)
+        idx = (Math.random() < 0.05/0.35)
           ? ultraIds[Math.floor(Math.random()*ultraIds.length)]
           : premiumIds[Math.floor(Math.random()*premiumIds.length)];
       }
