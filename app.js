@@ -629,9 +629,10 @@ function checkMilestones() {
   }
   if (!milestones.premiumAll && premiumPatternsSeen.size >= 16) {
     milestones.premiumAll = true;
-    const msg = '🎉全16種類のプレミア点灯パターンを達成しました！すごい！！'    
+    const msg = '🎉全16種類のプレミア点灯パターンを達成しました！すごい！！'
     try { alert(`おめでと！${msg}`); } catch {}
     setMessage(msg);
+    showEnding();
     changed = true;
   }
   if (changed) saveMilestones();
@@ -1543,6 +1544,17 @@ function updatePanelControls() {
   if (betBtn) betBtn.disabled = isSpinning || betCount >= maxBet || coinBalance <= 0;
   if (leverBtn) leverBtn.disabled = isSpinning || betCount === 0;
   stopBtns.forEach((b,i)=>{ if (b) b.disabled = !isSpinning || !reelSpinning[i]; });
+}
+
+function showEnding() {
+  const overlay = document.getElementById('endingOverlay');
+  if (!overlay) return;
+  overlay.removeAttribute('hidden');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    overlay.style.animation = 'none';
+    const credits = overlay.querySelector('.credits');
+    if (credits) credits.style.animation = 'none';
+  }
 }
 
 // Wire up panel events
