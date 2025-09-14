@@ -55,9 +55,9 @@ function setLeverEngaged(on) {
 }
 // 設定（1〜6）の確率テーブルと配当
 const SETTINGS = {
-  1: { big: 292, reg: 489, freeze: 4096 },
-  2: { big: 280, reg: 452, freeze: 4096 },
-  3: { big: 268, reg: 420, freeze: 4096 },
+  1: { big: 292, reg: 489, freeze: 8192 },
+  2: { big: 280, reg: 452, freeze: 8192 },
+  3: { big: 268, reg: 420, freeze: 8192 },
   4: { big: 257, reg: 390, freeze: 4096 },
   5: { big: 244, reg: 360, freeze: 4096 },
   6: { big: 50,  reg: 68 ,  freeze: 200 }, // 超高確率モード
