@@ -480,9 +480,24 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   flex-direction: column;
   gap: 12px;
   font-size: 1.25rem;
-  animation: credits-scroll 10s forwards;
+  animation: credits-scroll 5s forwards;
+}
+.ending-overlay .credits p {
+  margin: 0;
+  opacity: 0;
+  animation: text-fade 0.8s forwards;
+}
+.ending-overlay .credits p.congrats {
+  animation-delay: 0.8s;
+}
+.ending-overlay .credits p.developer-credit {
+  animation-delay: 2.4s;
 }
 
+@keyframes text-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
