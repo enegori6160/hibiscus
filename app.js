@@ -17,11 +17,19 @@ try {
 const symbols = ["🍒", "⭐", "🍉", "🔔", "7️⃣"]; // legacy (UI用): ぶどう→🍉
 // Manual mode symbols (BAR入り) ぶどう→🍉、リプレイ⭐を追加
 const symbolsManual = ['7', 'BAR', '🔔', '🍉', '🍒', '⭐'];
+const AD_CONFIG = window.AD_CONFIG || {
+  INITIAL_COINS: 100,
+  COINS_PER_PLAY: 3,
+  REWARD_COINS: 50,
+  INTERSTITIAL_INTERVAL: 50,
+  REWARD_AD_SECONDS: 5,
+  INTERSTITIAL_AD_SECONDS: 4
+};
 const spinDuration = 600;
-const costPerSpin = 3;
+const costPerSpin = AD_CONFIG.COINS_PER_PLAY;
 const enableUndo = false; // Undo feature disabled; button hidden
 
-let coinBalance = 100;
+let coinBalance = AD_CONFIG.INITIAL_COINS;
 let isSpinning = false;
 let lastState = null;
 let soundEnabled = true;
@@ -44,6 +52,12 @@ let spinCountTotal = 0;   // 総回転数
 let countBig = 0;         // 累計BIG
 let countReg = 0;         // 累計REG
 let countFreeze = 0;      // 累計フリーズ（特殊）
+let playCount = 0;
+let pendingInterstitialAfterRound = false;
+let currentCoins = coinBalance;
+let isRewardAdOpen = false;
+let isInterstitialAdOpen = false;
+let isOutOfCoinsModalOpen = false;
 let premiumPatternsSeen = new Set(); // 達成したプレミア点灯パターン
 // Quest progress (separate from session stats)
 // Loaded from storage; see defaultQuests below
@@ -52,6 +66,46 @@ function setLeverEngaged(on) {
     const leverBtn = document.getElementById('lever');
     if (leverBtn) leverBtn.classList.toggle('engaged', !!on);
   } catch {}
+}
+
+function isAdUiBlocking() {
+  return isRewardAdOpen || isInterstitialAdOpen || isOutOfCoinsModalOpen;
+}
+
+function getAdService() {
+  return window.AdService || window.AdSystem || null;
+}
+
+function updateAdStatusDisplay() {
+  currentCoins = coinBalance;
+  const coinsEl = document.getElementById('adCoinsStatus');
+  if (coinsEl) coinsEl.textContent = `コイン: ${currentCoins}`;
+  const playEl = document.getElementById('adPlayCountStatus');
+  if (playEl) playEl.textContent = `プレイ回数: ${playCount}`;
+}
+
+function showOutOfCoinsFlow() {
+  setMessage("コインが足りません", true);
+  playSound("error");
+  try {
+    const adService = getAdService();
+    if (adService && !adService.isAnyAdOpen()) {
+      adService.showOutOfCoinsModal();
+    }
+  } catch {}
+  updatePanelControls();
+}
+
+function maybeShowInterstitialAd() {
+  if (!pendingInterstitialAfterRound) return;
+  pendingInterstitialAfterRound = false;
+  try {
+    const adService = getAdService();
+    if (adService && !adService.isAnyAdOpen()) {
+      adService.showInterstitialAd();
+    }
+  } catch {}
+  updatePanelControls();
 }
 // 設定（1〜6）の確率テーブルと配当
 const SETTINGS = {
@@ -70,6 +124,50 @@ const storage = {
   save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} },
   load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
 };
+
+function setCoins(nextCoins) {
+  coinBalance = Math.max(0, Math.floor(Number(nextCoins) || 0));
+  storage.save("coinBalance", coinBalance);
+  storage.save("currentCoins", coinBalance);
+  try {
+    const adService = getAdService();
+    adService && adService.setCurrentCoins(coinBalance);
+  } catch {}
+}
+
+function addCoins(amount) {
+  const delta = Math.max(0, Math.floor(Number(amount) || 0));
+  if (delta <= 0) return 0;
+  setCoins(coinBalance + delta);
+  return delta;
+}
+
+function hasEnoughCoins(amount) {
+  const need = Math.max(0, Math.floor(Number(amount) || 0));
+  return coinBalance >= need;
+}
+
+function consumeCoins(amount) {
+  const cost = Math.max(0, Math.floor(Number(amount) || 0));
+  if (cost <= 0) return true;
+  if (!hasEnoughCoins(cost)) return false;
+  setCoins(coinBalance - cost);
+  return true;
+}
+
+function setPlayCount(nextCount) {
+  playCount = Math.max(0, Math.floor(Number(nextCount) || 0));
+  storage.save("playCount", playCount);
+  try {
+    const adService = getAdService();
+    adService && adService.setPlayCount(playCount);
+  } catch {}
+}
+
+function incrementPlayCount() {
+  setPlayCount(playCount + 1);
+  return playCount;
+}
 
 // Quest data
 // `unlock` property specifies which settings become available upon completion
@@ -537,10 +635,10 @@ function playThunderFX() { try { ensureAudio(); const now = audioCtx.currentTime
 
 function updateCoinDisplay() {
   const spinBtn = document.getElementById("spinButton");
-  spinBtn.disabled = isSpinning || coinBalance < costPerSpin;
+  spinBtn.disabled = isSpinning || isAdUiBlocking() || !hasEnoughCoins(costPerSpin);
   spinBtn.setAttribute("aria-disabled", spinBtn.disabled);
   const resetBtn = document.getElementById("resetButton");
-  resetBtn.disabled = isSpinning;
+  resetBtn.disabled = isSpinning || isAdUiBlocking();
   resetBtn.setAttribute("aria-disabled", resetBtn.disabled);
   const bottom = document.getElementById("coinDisplay");
   if (bottom) bottom.innerText = `所持コイン：${coinBalance}枚`;
@@ -549,7 +647,8 @@ function updateCoinDisplay() {
     top.textContent = String(coinBalance);
     try { top.classList.remove('ping'); void top.offsetWidth; top.classList.add('ping'); } catch {}
   }
-  storage.save("coinBalance", coinBalance);
+  setCoins(coinBalance);
+  updateAdStatusDisplay();
   checkQuests();
   checkMilestones();
 }
@@ -621,7 +720,7 @@ function checkMilestones() {
     const msg = '🎉累計1万回転達成！やりこみましたね。ありがとねほんと、じゃあボーナス1000枚プレゼント！🎁';
     try { alert(`おめでと！${msg}`); } catch {}
     setMessage(msg);
-    coinBalance += 1000;
+    addCoins(1000);
     updateCoinDisplay();
     changed = true;
   }
@@ -630,7 +729,7 @@ function checkMilestones() {
     const msg = '🎉累計5000回転達成！たくさん遊んでくれてありがとう！じゃあボーナス500枚プレゼント！🎁';
     try { alert(`おめでと！${msg}`); } catch {}
     setMessage(msg);
-    coinBalance += 500;
+    addCoins(500);
     updateCoinDisplay();
     changed = true;
   }
@@ -677,6 +776,9 @@ function onSpinStart() {
 
   spinCountCurrent += 1;
   spinCountTotal += 1;
+  incrementPlayCount();
+  pendingInterstitialAfterRound = playCount > 0 && playCount % AD_CONFIG.INTERSTITIAL_INTERVAL === 0;
+  updateAdStatusDisplay();
   checkMilestones();
   updateStatsDisplay();
   persistStats();
@@ -696,10 +798,9 @@ function onBonus(kind) {
 }
 
 function handleSpin() {
-  if (isSpinning) return;
-  if (coinBalance < costPerSpin) {
-    setMessage("コインが足りません", true);
-    playSound("error");
+  if (isSpinning || isAdUiBlocking()) return;
+  if (!hasEnoughCoins(costPerSpin)) {
+    showOutOfCoinsFlow();
     return;
   }
 
@@ -711,7 +812,7 @@ function handleSpin() {
   playSound("click");
   clearHibiscusGlow();
 
-  coinBalance -= costPerSpin;
+  consumeCoins(costPerSpin);
   updateCoinDisplay();
   onSpinStart();
 
@@ -724,7 +825,7 @@ function handleSpin() {
     if (isError) {
       setMessage("エラーが発生しました", true);
       playSound("error");
-      coinBalance += costPerSpin;
+      addCoins(costPerSpin);
     } else {
       const isBonus = Math.random() < 1 / 100;
       if (isBonus) {
@@ -816,10 +917,9 @@ if (settingSelect) {
 }
 
 function handleSpinV2() {
-  if (isSpinning) return;
-  if (coinBalance < costPerSpin) {
-    setMessage("コインが足りません", true);
-    playSound("error");
+  if (isSpinning || isAdUiBlocking()) return;
+  if (!hasEnoughCoins(costPerSpin)) {
+    showOutOfCoinsFlow();
     return;
   }
 
@@ -831,7 +931,7 @@ function handleSpinV2() {
   playSound("click");
   clearHibiscusGlow();
 
-  coinBalance -= costPerSpin;
+  consumeCoins(costPerSpin);
   updateCoinDisplay();
   onSpinStart();
   spinReels();
@@ -841,7 +941,7 @@ function handleSpinV2() {
     if (isError) {
       setMessage("エラーが発生しました", true);
       playSound("error");
-      coinBalance += costPerSpin;
+      addCoins(costPerSpin);
     } else {
       const table = SETTINGS[currentSetting] || SETTINGS[1];
       const pBig = 1 / table.big;
@@ -901,7 +1001,8 @@ try {
     document.body.classList.add("dark");
   }
   soundEnabled = storage.load("soundEnabled", true);
-  coinBalance = storage.load("coinBalance", 100);
+  setCoins(Number(storage.load("currentCoins", storage.load("coinBalance", AD_CONFIG.INITIAL_COINS))) || AD_CONFIG.INITIAL_COINS);
+  setPlayCount(Number(storage.load("playCount", 0)) || 0);
   try {
     const s = storage.load('stats', null);
     if (s) {
@@ -929,6 +1030,33 @@ try {
   reflectThemeButtons();
   reflectSoundButtons();
   updateStatsDisplay();
+  updateAdStatusDisplay();
+
+  try {
+    const adService = getAdService();
+    if (adService && typeof adService.init === 'function') {
+      adService.init({
+        onRewardGranted: (rewardCoins) => {
+          addCoins(Number(rewardCoins) || 0);
+          updateCoinDisplay();
+          updateBetDisplay();
+          updatePanelControls();
+          setMessage(`報酬で${rewardCoins}枚のコインを獲得しました`);
+        },
+        onStateChange: (state) => {
+          currentCoins = state.currentCoins;
+          playCount = state.playCount;
+          isRewardAdOpen = !!state.isRewardAdOpen;
+          isInterstitialAdOpen = !!state.isInterstitialAdOpen;
+          isOutOfCoinsModalOpen = !!state.isOutOfCoinsModalOpen;
+          updateAdStatusDisplay();
+          updatePanelControls();
+        }
+      });
+      adService.setCurrentCoins(coinBalance);
+      adService.setPlayCount(playCount);
+    }
+  } catch {}
 
   persistStats();
 
@@ -941,8 +1069,7 @@ try {
 })();
 
 function resetGame() {
-  if (isSpinning) return;
-  coinBalance = 100;
+  if (isSpinning || isAdUiBlocking()) return;
   betCount = 0;
   lastState = null;
   spinCountCurrent = 0;
@@ -953,7 +1080,7 @@ function resetGame() {
   updateStatsDisplay();
   persistStats();
   updateQuestDisplay();
-  setMessage("ゲームをリセットしました");
+  setMessage("ゲーム状態をリセットしました（コイン数は維持）");
   playSound("click");
   const reels = document.querySelectorAll(".reel");
   reels.forEach((reel) => { reel.innerHTML = ""; });
@@ -973,7 +1100,7 @@ function saveState() {
 
 function undo() {
   if (!enableUndo || !lastState) return;
-  coinBalance = lastState.coinBalance;
+  setCoins(lastState.coinBalance);
   setMessage(lastState.message);
   const reels = document.querySelectorAll(".reel");
   reels.forEach((reel, i) => { reel.innerHTML = lastState.reels[i]; });
@@ -998,6 +1125,7 @@ function setUndoDisabled(disabled) {
 
 // Space/Enter one‑key play: BET -> LEVER -> STOP(左→中→右)
 function handleSpacePlay() {
+  if (isAdUiBlocking()) return;
   // If spinning, stop next available reel in order
   if (isSpinning) {
     const i = [0,1,2].find(idx => reelSpinning[idx] && !reelStopped[idx]);
@@ -1007,6 +1135,7 @@ function handleSpacePlay() {
   // Not spinning: if no BET, bet max; otherwise pull lever
   if (betCount === 0) {
     pressBet();
+    if (betCount === 0) return;
     // 1タップでBET→レバーONまで行う
     pullLever();
   } else {
@@ -1099,10 +1228,9 @@ function evaluateLineWin(symbols) {
 }
 
 function handleSpinV3() {
-  if (isSpinning) return;
-  if (coinBalance < costPerSpin) {
-    setMessage("コインが足りません", true);
-    playSound("error");
+  if (isSpinning || isAdUiBlocking()) return;
+  if (!hasEnoughCoins(costPerSpin)) {
+    showOutOfCoinsFlow();
     return;
   }
 
@@ -1114,7 +1242,7 @@ function handleSpinV3() {
   playSound("click");
   clearHibiscusGlow();
 
-  coinBalance -= costPerSpin;
+  consumeCoins(costPerSpin);
   updateCoinDisplay();
   onSpinStart();
 
@@ -1126,7 +1254,7 @@ function handleSpinV3() {
     if (isError) {
       setMessage("エラーが発生しました", true);
       playSound("error");
-      coinBalance += costPerSpin;
+      addCoins(costPerSpin);
     } else {
       // BIG/REG/フリーズ 抽選（設定連動）
       const table = SETTINGS[currentSetting] || SETTINGS[1];
@@ -1146,6 +1274,7 @@ function handleSpinV3() {
           spinBtn.removeAttribute("aria-busy");
           updateCoinDisplay();
           setUndoDisabled(!lastState);
+          maybeShowInterstitialAd();
         });
         awarded = true; return;
       } else if (u < pFreeze + pBig) {
@@ -1158,6 +1287,7 @@ function handleSpinV3() {
           spinBtn.removeAttribute("aria-busy");
           updateCoinDisplay();
           setUndoDisabled(!lastState);
+          maybeShowInterstitialAd();
         }, { fixedTicks: 25, maxDurationMs: 600, soundEveryOverride: 3 });
         awarded = true; return;
       } else if (u < pFreeze + pBig + pReg) {
@@ -1170,6 +1300,7 @@ function handleSpinV3() {
           spinBtn.removeAttribute("aria-busy");
           updateCoinDisplay();
           setUndoDisabled(!lastState);
+          maybeShowInterstitialAd();
         }, { fixedTicks: 18, maxDurationMs: 450, soundEveryOverride: 4 });
         awarded = true; return;
       }
@@ -1188,6 +1319,7 @@ function handleSpinV3() {
             spinBtn.removeAttribute("aria-busy");
             updateCoinDisplay();
             setUndoDisabled(!lastState);
+            maybeShowInterstitialAd();
           });
           return;
         } else {
@@ -1200,6 +1332,7 @@ function handleSpinV3() {
     spinBtn.removeAttribute("aria-busy");
     updateCoinDisplay();
     setUndoDisabled(!lastState);
+    maybeShowInterstitialAd();
   }, spinDuration);
 }
 
@@ -1331,6 +1464,7 @@ function runFreezeSequence() {
     addCoinsGradually(PAYOUT.freeze, () => {
       isSpinning = false; pendingBonus = null; freezeActive = false; betCount = 0;
       updateCoinDisplay(); updateBetDisplay(); updatePanelControls(); setLeverEngaged(false);
+      maybeShowInterstitialAd();
     });
   }, 1800 + 1400);
 }
@@ -1372,6 +1506,7 @@ function evaluateManualOutcome() {
       updateBetDisplay();
       updatePanelControls();
       try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+      maybeShowInterstitialAd();
     }, { fixedTicks: 25, maxDurationMs: 600, soundEveryOverride: 3 });
     return;
   }
@@ -1386,6 +1521,7 @@ function evaluateManualOutcome() {
       updateBetDisplay();
       updatePanelControls();
       try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+      maybeShowInterstitialAd();
     });
     return;
   }
@@ -1400,6 +1536,7 @@ function evaluateManualOutcome() {
       updateBetDisplay();
       updatePanelControls();
       try { const leverBtn = document.getElementById('lever'); leverBtn && leverBtn.classList.remove('engaged'); } catch {}
+      maybeShowInterstitialAd();
     }, { fixedTicks: 18, maxDurationMs: 450, soundEveryOverride: 4 });
     return;
   }
@@ -1422,6 +1559,7 @@ function evaluateManualOutcome() {
       updateBetDisplay();
       updatePanelControls();
       setLeverEngaged(false);
+      maybeShowInterstitialAd();
     });
   } else if (replayCount > 0) {
     setMessage('リプレイ');
@@ -1433,6 +1571,7 @@ function evaluateManualOutcome() {
       updateBetDisplay();
       updatePanelControls();
       setLeverEngaged(false);
+      maybeShowInterstitialAd();
     });
   } else {
     setMessage('ハズレ…次こそ当てよう！');
@@ -1443,6 +1582,7 @@ function evaluateManualOutcome() {
     updateBetDisplay();
     updatePanelControls();
     setLeverEngaged(false);
+    maybeShowInterstitialAd();
   }
 }
 
@@ -1476,7 +1616,7 @@ function addCoinsGradually(amount, onDone, opts = {}) {
   const iv = setInterval(() => {
     ensureAudio();
     const inc = Math.min(unit, amount - paid);
-    coinBalance += inc;
+    addCoins(inc);
     updateCoinDisplay();
     // Sound: every tick for hundreds mode, or at interval for per-coin mode
     if (useHundreds || (paid % soundEvery) === 0) playSound('coin');
@@ -1486,25 +1626,25 @@ function addCoinsGradually(amount, onDone, opts = {}) {
 }
 
 function pressBet() {
-  if (isSpinning) return;
-  if (coinBalance <= 0) { setMessage('コインが足りません', true); playSound('error'); return; }
+  if (isSpinning || isAdUiBlocking()) return;
+  if (!hasEnoughCoins(costPerSpin)) { showOutOfCoinsFlow(); return; }
   ensureAudio();
-  // 一度の押下で最大3枚BET（残高が足りなければ残高分）
-  betCount = Math.min(maxBet, coinBalance);
+  // 1プレイ固定コスト
+  betCount = costPerSpin;
   playSound('click');
   updateBetDisplay();
 }
 
 function pullLever() {
-  if (isSpinning) return;
+  if (isSpinning || isAdUiBlocking()) return;
   if (betCount === 0) { setMessage('BETしてください'); return; }
-  if (coinBalance < betCount) { setMessage('コインが足りません', true); playSound('error'); return; }
+  if (!hasEnoughCoins(costPerSpin)) { showOutOfCoinsFlow(); return; }
   ensureAudio();
   saveState();
   isSpinning = true;
   setMessage('回転中…');
   clearHibiscusGlow();
-  coinBalance -= betCount;
+  consumeCoins(costPerSpin);
   updateCoinDisplay();
   onSpinStart();
   playSound('click');
@@ -1548,9 +1688,10 @@ function updatePanelControls() {
   const betBtn = document.getElementById('betButton');
   const leverBtn = document.getElementById('lever');
   const stopBtns = [0,1,2].map(i => document.getElementById(`stop${i}`));
-  if (betBtn) betBtn.disabled = isSpinning || betCount >= maxBet || coinBalance <= 0;
-  if (leverBtn) leverBtn.disabled = isSpinning || betCount === 0;
-  stopBtns.forEach((b,i)=>{ if (b) b.disabled = !isSpinning || !reelSpinning[i]; });
+  const blocked = isSpinning || isAdUiBlocking();
+  if (betBtn) betBtn.disabled = blocked || !hasEnoughCoins(costPerSpin);
+  if (leverBtn) leverBtn.disabled = blocked || betCount < costPerSpin;
+  stopBtns.forEach((b,i)=>{ if (b) b.disabled = blocked || !isSpinning || !reelSpinning[i]; });
 }
 
 function showEnding() {
@@ -1581,7 +1722,7 @@ try {
   if (typeof window !== 'undefined') {
     window._game = {
       // state
-      get coin(){ return coinBalance; }, set coin(v){ coinBalance = v; updateCoinDisplay(); },
+      get coin(){ return coinBalance; }, set coin(v){ setCoins(v); updateCoinDisplay(); },
       get bet(){ return betCount; }, set bet(v){ betCount = v; updateBetDisplay(); },
       // actions
       pressBet, pullLever, stopReel,
