@@ -1688,10 +1688,10 @@ function updatePanelControls() {
   const betBtn = document.getElementById('betButton');
   const leverBtn = document.getElementById('lever');
   const stopBtns = [0,1,2].map(i => document.getElementById(`stop${i}`));
-  const blocked = isSpinning || isAdUiBlocking();
-  if (betBtn) betBtn.disabled = blocked || !hasEnoughCoins(costPerSpin);
-  if (leverBtn) leverBtn.disabled = blocked || betCount < costPerSpin;
-  stopBtns.forEach((b,i)=>{ if (b) b.disabled = blocked || !isSpinning || !reelSpinning[i]; });
+  const adBlocked = isAdUiBlocking();
+  if (betBtn) betBtn.disabled = adBlocked || isSpinning || !hasEnoughCoins(costPerSpin);
+  if (leverBtn) leverBtn.disabled = adBlocked || isSpinning || betCount < costPerSpin;
+  stopBtns.forEach((b,i)=>{ if (b) b.disabled = adBlocked || !isSpinning || !reelSpinning[i]; });
 }
 
 function showEnding() {
