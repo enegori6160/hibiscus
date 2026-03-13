@@ -18,7 +18,7 @@ const symbols = ["🍒", "⭐", "🍉", "🔔", "7️⃣"]; // legacy (UI用): �
 // Manual mode symbols (BAR入り) ぶどう→🍉、リプレイ⭐を追加
 const symbolsManual = ['7', 'BAR', '🔔', '🍉', '🍒', '⭐'];
 const AD_CONFIG = window.AD_CONFIG || {
-  INITIAL_COINS: 100,
+  INITIAL_COINS: 50,
   COINS_PER_PLAY: 3,
   REWARD_COINS: 50,
   INTERSTITIAL_INTERVAL: 50,
