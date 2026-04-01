@@ -38,12 +38,13 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   margin: 0;
+  min-height: 100vh;
   line-height: 1.6;
   font-size: var(--fs-base);
   -webkit-tap-highlight-color: transparent;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
 }
 
 body.dark {
@@ -64,6 +65,8 @@ body.dark {
   flex-direction: column;
   gap: clamp(16px, 4vw, 32px);
   align-items: center;
+  flex: 1 0 auto;
+  margin: 0 auto;
 }
 /* 以前の2カラムは廃止し、常に1カラムで上部をゲームに占有させる */
 
@@ -560,6 +563,103 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 /* How to / Settings */
 .howto-list { margin: 0; padding-left: 1.2rem; }
 .howto-list li { margin: 4px 0; }
+.guide-panel { display: grid; gap: 20px; }
+.guide-panel h2 { margin: 0; }
+.guide-block { display: grid; gap: 10px; }
+.guide-block h3 {
+  margin: 0;
+  font-size: clamp(16px, 1.2vw + 14px, 20px);
+}
+.guide-block p,
+.guide-block ol,
+.guide-block dl {
+  margin: 0;
+}
+.guide-steps {
+  padding-left: 1.3rem;
+  display: grid;
+  gap: 8px;
+}
+.guide-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+  background: var(--color-surface);
+}
+.guide-table caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 0 10px;
+  color: var(--color-muted);
+  font-size: 0.95em;
+}
+.guide-table th,
+.guide-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+.guide-table thead th {
+  background: var(--color-bg);
+}
+.guide-table tbody tr:last-child th,
+.guide-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.guide-payouts,
+.guide-faq {
+  display: grid;
+  gap: 12px;
+}
+.guide-payouts > div,
+.guide-faq > div {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+}
+.guide-payouts dt,
+.guide-faq dt {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.guide-payouts dd,
+.guide-faq dd {
+  margin: 0;
+  color: var(--color-text);
+}
+.guide-note {
+  color: var(--color-muted);
+  font-size: 0.95em;
+}
+.guide-links {
+  display: grid;
+  gap: 12px;
+}
+.guide-link-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.guide-link-card strong {
+  color: var(--color-text);
+  font-size: 1rem;
+}
+.guide-link-card span {
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
 .quests-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .quest-item { display: grid; gap: 4px; }
 .quest-title { font-weight: 600; }
@@ -580,6 +680,10 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   padding: 16px;
   width: 100%;
   max-width: 1100px;
+  margin: 0 auto;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .app-footer .developer-credit::before {
@@ -668,6 +772,10 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   .slot-machine { gap: 6px; }
   .reel { width: 86px; height: 156px; }
   .reel span { font-size: 2.2rem; }
+  .guide-panel { gap: 16px; }
+  .guide-link-card { padding: 12px 14px; }
+  .guide-payouts > div,
+  .guide-faq > div { padding: 10px 12px; }
 }
 
 /* Reduced motion: limit to decorative effects (keep reels functional) */
