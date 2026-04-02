@@ -59,6 +59,44 @@ premiumFx.play({
 - 外部ライブラリは使用せず、プレーンなHTML/CSS/JavaScriptで構成
 - サウンドは Web Audio API を使用
 
+## 広告サービス（AdService）
+`ad-service.js` が提供するファサードで、広告表示のライフサイクルを管理します。内部で `AdSystem`（`ad-system.js`）をアダプターとして利用し、二重表示防止のガード処理を備えています。
+
+### API
+
+| メソッド | 説明 |
+| --- | --- |
+| `AdService.init(options)` | 広告システムを初期化する。`options` でコールバックを登録する |
+| `AdService.showRewardAd()` | リワード広告を表示する。成功時 `true`、広告表示中なら `false` |
+| `AdService.showInterstitialAd()` | インタースティシャル広告を表示する。戻り値は同上 |
+| `AdService.showOutOfCoinsModal()` | コイン不足モーダルを表示する |
+| `AdService.isAnyAdOpen()` | いずれかの広告 UI が開いているか返す |
+| `AdService.setCurrentCoins(n)` | 現在のコイン数を設定する |
+| `AdService.setPlayCount(n)` | プレイ回数を設定する |
+| `AdService.getState()` | 現在の広告状態オブジェクトを返す |
+
+### 使用例
+
+```js
+AdService.init({
+  onRewardGranted: function (coins) {
+    console.log('報酬獲得:', coins);
+    coinBalance += coins;
+  },
+  onStateChange: function (state) {
+    console.log('広告状態:', state.isRewardAdOpen, state.isInterstitialAdOpen);
+  },
+  onInterstitialClosed: function () {
+    console.log('インタースティシャル広告を閉じました');
+  }
+});
+
+// リワード広告を表示
+if (!AdService.showRewardAd()) {
+  console.log('広告を表示できません（既に表示中）');
+}
+```
+
 ## 開発
 静的ファイルのみで構成されています。ブラウザで `index.html` を開くだけで実行できます。
 `app.js` 内の `enableUndo` を `false` にすると取り消し機能を無効化できます。
