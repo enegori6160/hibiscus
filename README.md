@@ -45,6 +45,30 @@ premiumFx.play({
 });
 ```
 
+### 追加API
+
+| メソッド | 説明 |
+| --- | --- |
+| `premiumFx.stop()` | 再生中の演出を即座に停止し、オーバーレイやオーディオを破棄する。再生中でない場合もクリーンアップを実行する |
+| `premiumFx.isPlaying()` | 演出が再生中であれば `true`、そうでなければ `false` を返す |
+
+```js
+// 演出の再生状態を確認してから停止する例
+if (premiumFx.isPlaying()) {
+  premiumFx.stop();
+  console.log('演出を中断しました');
+}
+
+// play() は Promise を返すため、正常終了と手動停止の両方に対応できる
+premiumFx.play({ durationMs: 3200 }).then(() => {
+  console.log('演出が完了しました（正常終了または stop() による中断）');
+});
+
+// 一定時間後に自動停止するタイムアウト付きの例
+const timeout = setTimeout(() => premiumFx.stop(), 5000);
+premiumFx.play().then(() => clearTimeout(timeout));
+```
+
 ## キーバインド
 - **Space / Enter**: スピン
 - **Ctrl+Z / Cmd+Z**: 直前のスピンを取り消し
