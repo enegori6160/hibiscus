@@ -83,6 +83,34 @@ premiumFx.play().then(() => clearTimeout(timeout));
 - 外部ライブラリは使用せず、プレーンなHTML/CSS/JavaScriptで構成
 - サウンドは Web Audio API を使用
 
+## 広告設定（AD_CONFIG）
+`ad-config.js` がエクスポートするフリーズ済み設定オブジェクトです。広告の表示間隔やコイン経済のパラメータを一元管理します。
+
+### プロパティ
+
+| プロパティ | 型 | デフォルト値 | 説明 |
+| --- | --- | --- | --- |
+| `INITIAL_COINS` | `number` | `100` | ゲーム開始時の初期コイン数 |
+| `COINS_PER_PLAY` | `number` | `3` | 1回のプレイで消費するコイン数 |
+| `REWARD_COINS` | `number` | `50` | リワード広告視聴で獲得できるコイン数 |
+| `INTERSTITIAL_INTERVAL` | `number` | `50` | インタースティシャル広告を表示するプレイ回数の間隔 |
+| `REWARD_AD_SECONDS` | `number` | `5` | リワード広告のカウントダウン秒数 |
+| `INTERSTITIAL_AD_SECONDS` | `number` | `4` | インタースティシャル広告のカウントダウン秒数 |
+
+### 使用例
+
+```js
+// コイン残高が1プレイ分あるか確認する
+if (currentCoins >= AD_CONFIG.COINS_PER_PLAY) {
+  currentCoins -= AD_CONFIG.COINS_PER_PLAY;
+}
+
+// インタースティシャル広告の表示タイミングを判定する
+if (playCount % AD_CONFIG.INTERSTITIAL_INTERVAL === 0) {
+  AdService.showInterstitialAd();
+}
+```
+
 ## 広告サービス（AdService）
 `ad-service.js` が提供するファサードで、広告表示のライフサイクルを管理します。内部で `AdSystem`（`ad-system.js`）をアダプターとして利用し、二重表示防止のガード処理を備えています。
 
