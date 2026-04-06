@@ -149,6 +149,32 @@ if (!AdService.showRewardAd()) {
 }
 ```
 
+## 広告システム（AdSystem）
+`ad-system.js` が提供する低レベルアダプターで、`AdService` の内部で使用されます。直接呼び出す場合は `window.AdSystem` 経由でアクセスします。
+
+### API（抜粋）
+
+| メソッド | 説明 |
+| --- | --- |
+| `AdSystem.shouldShowInterstitial()` | 現在のプレイ回数がインタースティシャル広告の表示タイミングかどうかを返す（`boolean`） |
+| `AdSystem.destroy()` | 広告 UI をすべて DOM から除去し、タイマーを停止してリソースを解放する |
+| `AdSystem.incrementPlayCount()` | プレイ回数を 1 増やし、必要に応じてインタースティシャル広告をトリガーする |
+
+### 使用例
+
+```js
+// インタースティシャル広告を手動で判定・表示する
+AdSystem.incrementPlayCount();
+if (AdSystem.shouldShowInterstitial()) {
+  AdSystem.showInterstitialAd();
+}
+
+// ページ離脱前にリソースを解放する
+window.addEventListener('beforeunload', function () {
+  AdSystem.destroy();
+});
+```
+
 ## 開発
 静的ファイルのみで構成されています。ブラウザで `index.html` を開くだけで実行できます。
 `app.js` 内の `enableUndo` を `false` にすると取り消し機能を無効化できます。
