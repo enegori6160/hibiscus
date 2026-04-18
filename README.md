@@ -160,6 +160,19 @@ if (!AdService.showRewardAd()) {
 | `AdSystem.destroy()` | 広告 UI をすべて DOM から除去し、タイマーを停止してリソースを解放する |
 | `AdSystem.incrementPlayCount()` | プレイ回数を 1 増やし、必要に応じてインタースティシャル広告をトリガーする |
 
+### 未ドキュメント関数の追記（AdSystem）
+
+| メソッド | 説明 |
+| --- | --- |
+| `AdSystem.init(options)` | 広告システムを初期化し、コールバック（`onRewardComplete` / `onStateChange` / `onInterstitialClose`）を登録する |
+| `AdSystem.setCurrentCoins(value)` | 現在コイン数を設定し、状態更新を通知する |
+| `AdSystem.setPlayCount(value)` | プレイ回数を設定し、状態更新を通知する |
+| `AdSystem.showRewardAd()` | リワード広告モーダルを表示する。表示できた場合 `true`、表示不可なら `false` |
+| `AdSystem.showOutOfCoinsModal()` | コイン不足モーダルを表示する |
+| `AdSystem.showInterstitialAd()` | インタースティシャル広告モーダルを表示する。表示できた場合 `true`、表示不可なら `false` |
+| `AdSystem.isAnyAdOpen()` | いずれかの広告関連モーダルが開いているかを返す |
+| `AdSystem.getState()` | 現在の内部状態（コイン数、プレイ回数、各モーダル表示状態）を返す |
+
 ### 使用例
 
 ```js
