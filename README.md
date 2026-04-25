@@ -190,4 +190,65 @@ window.addEventListener('beforeunload', function () {
 
 ## コインカウントアップ演出（addCoinsGradually）
 
-`app.js` 内のユーティリティ関数で、コインを即時加算するのではなく一定間隔で少しずつ増やしながら SE を再生�
+`app.js` 内のユーティリティ関数で、コインを即時加算するのではなく一定間隔で少しずつ増やしながら SE を再生し、視覚的なカウントアップ演出を実現します。
+
+```js
+addCoinsGradually(amount, onDone, opts)
+```
+
+| 引数 | 型 | 説明 |
+| --- | --- | --- |
+| `amount` | `number` | 加算するコインの合計枚数 |
+| `onDone` | `function \| null` | カウントアップ完了時に呼ばれるコールバック |
+| `opts.fixedTicks` | `number?` | カウント回数を固定する（総時間 = `fixedTicks × intervalMs`） |
+| `opts.maxDurationMs` | `number?` | `fixedTicks` 使用時の総演出時間（デフォルト `600`ms） |
+| `opts.unitOverride` | `number?` | 1 tick あたりの加算枚数を上書きする |
+| `opts.intervalOverrideMs` | `number?` | tick 間隔（ms）を上書きする |
+| `opts.soundEveryOverride` | `number?` | SE を何 tick ごとに鳴らすか上書きする |
+
+`amount` が 2000 以上の場合は自動的に 100 枚単位でカウントし、高速に演出を終わらせます。
+
+### 使用例
+
+```js
+// ボーナス入賞時に 350 枚を約 0.6 秒かけて加算する
+addCoinsGradually(350, () => {
+  console.log('コイン加算完了');
+  updatePanelControls();
+});
+
+// 固定 20 カウント・1 秒かけてゆっくり加算する
+addCoinsGradually(120, null, { fixedTicks: 20, maxDurationMs: 1000 });
+
+// 1000 枚を 10 枚刻み・12ms 間隔で高速加算する
+addCoinsGradually(1000, onDone, { unitOverride: 10, intervalOverrideMs: 12 });
+```
+
+## シンボル確率計算（perCellFromSpinProb）
+
+`app.js` 内のユーティリティ関数で、スピン単位の当選確率 P（例: 1/8）をセル単位の出現確率に変換します。内部でシンボルの重み付きランダム抽選（`randomSymbolManual`）に使用する `MANUAL_PROBS` テーブルを構築するために呼ばれます。
+
+```js
+perCellFromSpinProb(P)
+```
+
+| 引数 | 型 | 説明 |
+| --- | --- | --- |
+| `P` | `number` | 1スピンあたりの目標当選確率（0〜1） |
+| 戻り値 | `number` | 3行×5列リールにおけるセルごとの出現確率 |
+
+計算式は 3行×5列リールを想定した逆算で、`p = (1 - (1 - P)^(1/5))^(1/3)` となります。この値で各リールの各行を独立に抽選することで、スピン全体の当選確率が P に近似します。
+
+### 使用例
+
+```js
+// 「🔔」を約 1/8 のスピン確率にしたい場合
+const pCell = perCellFromSpinProb(1 / 7.97); // ≈ 0.0566（セルごとの出現確率）
+
+// 低確率シンボル（🍒）の確認
+const pCherry = perCellFromSpinProb(1 / 61.8); // ≈ 0.0157
+```
+
+## 開発
+静的ファイルのみで構成されています。ブラウザで `index.html` を開くだけで実行できます。
+`app.js` 内の `enableUndo` を `false` にすると取り消し機能を無効化できます。
