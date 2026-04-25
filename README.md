@@ -188,6 +188,6 @@ window.addEventListener('beforeunload', function () {
 });
 ```
 
-## 開発
-静的ファイルのみで構成されています。ブラウザで `index.html` を開くだけで実行できます。
-`app.js` 内の `enableUndo` を `false` にすると取り消し機能を無効化できます。
+## コインカウントアップ演出（addCoinsGradually）
+
+`app.js` 内のユーティリティ関数で、コインを即時加算するのではなく一定間隔で少しずつ増やしながら SE を再生�
