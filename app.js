@@ -1001,7 +1001,8 @@ try {
     document.body.classList.add("dark");
   }
   soundEnabled = storage.load("soundEnabled", true);
-  setCoins(Number(storage.load("currentCoins", storage.load("coinBalance", AD_CONFIG.INITIAL_COINS))) || AD_CONFIG.INITIAL_COINS);
+  const savedCoins = Number(storage.load("currentCoins", storage.load("coinBalance", AD_CONFIG.INITIAL_COINS)));
+  setCoins(Number.isFinite(savedCoins) && savedCoins >= 0 ? savedCoins : AD_CONFIG.INITIAL_COINS);
   setPlayCount(Number(storage.load("playCount", 0)) || 0);
   try {
     const s = storage.load('stats', null);
@@ -1041,7 +1042,7 @@ try {
           updateCoinDisplay();
           updateBetDisplay();
           updatePanelControls();
-          setMessage(`報酬で${rewardCoins}枚のコインを獲得しました`);
+          setMessage(`コインを無料で${rewardCoins}枚補充しました`);
         },
         onStateChange: (state) => {
           currentCoins = state.currentCoins;
@@ -1144,6 +1145,7 @@ function handleSpacePlay() {
 }
 
 document.addEventListener("keydown", (e) => {
+  if (e.target && e.target.closest('a, button, input, select, textarea, [contenteditable="true"], dialog')) return;
   if (enableUndo && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault();
     undo();
@@ -1511,7 +1513,7 @@ function evaluateManualOutcome() {
     return;
   }
   if (pendingBonus === 'freeze') {
-    setMessage('❄️ フリーズ！SUPER BIG +2000枚');
+    setMessage('❄️ フリーズ！SUPER BIG +3000枚');
     onBonus('freeze');
     addCoinsGradually(PAYOUT.freeze, () => {
       isSpinning = false;
@@ -1526,7 +1528,7 @@ function evaluateManualOutcome() {
     return;
   }
   if (pendingBonus === 'reg') {
-    setMessage('🌺 REGボーナス！100枚GET！');
+    setMessage('🌺 REGボーナス！120枚GET！');
     onBonus('reg');
     addCoinsGradually(PAYOUT.reg, () => {
       isSpinning = false;
@@ -1689,7 +1691,7 @@ function updatePanelControls() {
   const leverBtn = document.getElementById('lever');
   const stopBtns = [0,1,2].map(i => document.getElementById(`stop${i}`));
   const adBlocked = isAdUiBlocking();
-  if (betBtn) betBtn.disabled = adBlocked || isSpinning || !hasEnoughCoins(costPerSpin);
+  if (betBtn) betBtn.disabled = adBlocked || isSpinning;
   if (leverBtn) leverBtn.disabled = adBlocked || isSpinning || betCount < costPerSpin;
   stopBtns.forEach((b,i)=>{ if (b) b.disabled = adBlocked || !isSpinning || !reelSpinning[i]; });
 }

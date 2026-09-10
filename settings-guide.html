@@ -4,56 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>設定別の楽しみ方 | Hibiscus</title>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4931880787884929" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-4931880787884929">
+  <meta name="description" content="設定1〜6の抽選確率、クエスト解放条件、試行回数による結果のばらつきを解説します。">
+  <link rel="canonical" href="https://hibiscus-24w.pages.dev/settings-guide.html">
   <link rel="icon" href="data:,">
   <meta name="color-scheme" content="light dark">
-  <link rel="stylesheet" href="style.css?v=20260402-1">
+  <link rel="stylesheet" href="style.css?v=20260910-1">
 </head>
 <body>
+  <nav class="site-nav" aria-label="メインナビゲーション"><a href="index.html">Hibiscus / ゲーム</a><a href="beginner-guide.html">遊び方</a><a href="settings-guide.html">設定と抽選</a><a href="effects-guide.html">演出図鑑</a></nav>
   <main class="static-page-main">
     <article class="static-page-card">
-      <h1>設定別の楽しみ方</h1>
-      <p>Hibiscus Slot では設定 1〜5 が通常レンジ、設定 6 が超高確率モードとして実装されています。単に当たりやすさが変わるだけでなく、どの設定で何を観察すると差が分かりやすいかを知っておくと、短時間でも比較しやすくなります。</p>
-
-      <h2>設定ごとのボーナス確率</h2>
-      <div class="guide-table-wrap">
-        <table class="guide-table">
-          <thead>
-            <tr>
-              <th scope="col">設定</th>
-              <th scope="col">BIG</th>
-              <th scope="col">REG</th>
-              <th scope="col">フリーズ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><th scope="row">1</th><td>1/292</td><td>1/489</td><td>1/8192</td></tr>
-            <tr><th scope="row">2</th><td>1/280</td><td>1/452</td><td>1/8192</td></tr>
-            <tr><th scope="row">3</th><td>1/268</td><td>1/420</td><td>1/8192</td></tr>
-            <tr><th scope="row">4</th><td>1/257</td><td>1/390</td><td>1/4096</td></tr>
-            <tr><th scope="row">5</th><td>1/244</td><td>1/360</td><td>1/4096</td></tr>
-            <tr><th scope="row">6</th><td>1/50</td><td>1/68</td><td>1/200</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2>比較のコツ</h2>
-      <p>設定 1〜3 は大きく荒れず、通常域で少しずつ差を感じるため、長めに回して統計表示を見るのに向いています。設定 4〜5 は BIG と REG の両方が軽くなり、フリーズ確率も上がるため、ランプ演出を含めた総合的な違いが分かりやすいゾーンです。設定 6 は極端に当たりやすく、演出確認や仕様把握には便利ですが、通常設定の挙動比較には向きません。</p>
-
-      <h2>見るべき数字</h2>
-      <ul>
-        <li>BIG だけでなく REG の回数も確認すること</li>
-        <li>総回転数に対してどの程度の間隔で当たっているかを見ること</li>
-        <li>フリーズ発生時は設定の違いが演出頻度にも出ること</li>
-      </ul>
-
-      <h2>関連ページ</h2>
-      <ul>
-        <li><a href="guide.html">解説一覧</a></li>
-        <li><a href="beginner-guide.html">初心者向けガイド</a></li>
-        <li><a href="effects-guide.html">ランプ演出とフリーズ解説</a></li>
-        <li><a href="index.html">トップページ</a></li>
-      </ul>
+      <h1>設定の解放条件と抽選の仕組み</h1>
+      <p>Hibiscusの設定はゲーム内のボーナス抽選を変えるものです。実在の遊技機の設定を再現した値ではありません。設定1・2で開始し、クエストの達成に応じて選択肢が増えます。</p>
+      <h2>クエストで設定を解放する</h2>
+      <div class="guide-table-wrap"><table class="guide-table"><thead><tr><th scope="col">設定</th><th scope="col">解放条件</th></tr></thead><tbody><tr><th scope="row">1・2</th><td>最初から選択可能</td></tr><tr><th scope="row">3</th><td>累計200回転、またはBIG1回</td></tr><tr><th scope="row">4</th><td>BIG累計5回</td></tr><tr><th scope="row">5</th><td>BIG累計10回、または累計2000回転</td></tr><tr><th scope="row">6</th><td>フリーズ1回、または所持コイン5000枚</td></tr></tbody></table></div>
+      <p>どちらか一方の条件で解放されます。解放された設定は保存され、選択メニューから切り替えられます。設定6は演出に遭遇しやすい超高確率モードです。</p>
+      <h2>1回転ごとのボーナス確率</h2>
+      <div class="guide-table-wrap"><table class="guide-table"><caption>app.jsのSETTINGSに基づく抽選値</caption><thead><tr><th scope="col">設定</th><th scope="col">BIG</th><th scope="col">REG</th><th scope="col">フリーズ</th></tr></thead><tbody>
+      <tr><th scope="row">1</th><td>1/292</td><td>1/489</td><td>1/8192</td></tr>
+      <tr><th scope="row">2</th><td>1/280</td><td>1/452</td><td>1/8192</td></tr>
+      <tr><th scope="row">3</th><td>1/268</td><td>1/420</td><td>1/8192</td></tr>
+      <tr><th scope="row">4</th><td>1/257</td><td>1/390</td><td>1/4096</td></tr>
+      <tr><th scope="row">5</th><td>1/244</td><td>1/360</td><td>1/4096</td></tr>
+      <tr><th scope="row">6</th><td>1/50</td><td>1/68</td><td>1/200</td></tr></tbody></table></div>
+      <h2>抽選はいつ決まる？</h2>
+      <p>レバーを押すとブラウザのMath.random()で0以上1未満の値を1つ作ります。フリーズ、BIG、REGの順に重ならない範囲を割り当て、どこにも入らなければ通常回転になります。表のBIG確率にフリーズは含めません。</p>
+      <p>ボーナスの抽選に停止順や停止タイミング、広告のクリック、以前のハズレ回数は使っていません。天井によるボーナス保証もありません。これは娯楽用のブラウザ内抽選で、第三者による乱数認証を受けたものではありません。</p>
+      <h2>1/292でも292回で必ず当たるわけではない</h2>
+      <p>一定の設定でn回抽選したとき、BIGが1回以上当たる確率は「1 − (1 − BIG確率)のn乗」です。設定1で100回なら約29.0%、292回なら約63.3%。292回回してもBIGが0回の可能性は約36.7%あります。</p>
+      <p>設定6で100回ならBIGを1回以上引く確率は約86.7%です。それでも必ず当たるとは限りません。フリーズやREGを含めた確率とは違う計算です。</p>
+      <h2>記録を比較する際の注意</h2>
+      <p>短い試行では結果が大きく偏るため、数回の当選だけで設定差を判断できません。ゲームの総回転数とBIG・REG回数は設定別に分かれていません。切り替える直前と終了時の数字を控え、その差で比較してください。</p>
+      <p>この表だけからコインの増減率は算出できません。小役、リプレイ、無料補充やクエスト報酬も残高に影響します。</p>
+      <p><a href="beginner-guide.html">配当と保存のルール</a> / <a href="effects-guide.html">ランプ演出図鑑</a></p>
     </article>
   </main>
 

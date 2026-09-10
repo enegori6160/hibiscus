@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hibiscus-24w.pages.dev/sitemap.xml
